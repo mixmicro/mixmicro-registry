@@ -25,14 +25,14 @@
         <slf4j.version>1.7.25</slf4j.version>
         <log4j.version>2.13.1</log4j.version>
         <asm.version>7.1</asm.version>
-        <mongo.version>4.0.5</mongo.version>
         <spring.boot.version>2.2.10.RELEASE</spring.boot.version>
-        <mixmicro.framework.version>1.0.7.RELEASE</mixmicro.framework.version>
+        <mixmicro.framework.version>1.0.8.BUILD-SNAPSHOT</mixmicro.framework.version>
         <mixmicro.boot.version>2020.10.RELEASE</mixmicro.boot.version>
         <stream.dependencies.version>1.0.0.RC3</stream.dependencies.version>
         <plugin.container.version>1.0.1.BUILD-SNAPSHOT</plugin.container.version>
         <bolt.version>1.0.0.BUILD-SNAPSHOT</bolt.version>
         <powermock.version>2.0.2</powermock.version>
+        <gson.version>2.8.6</gson.version>
 
         <maven.javadoc.skip>true</maven.javadoc.skip>
         <maven.deploy.skip>false</maven.deploy.skip>
@@ -56,7 +56,8 @@
 
 
     <modules>
-
+        <module>sync</module>
+        <module>samples</module>
     </modules>
 
     <dependencyManagement>
@@ -99,58 +100,84 @@
                 <type>pom</type>
             </dependency>
 
-            <!-- Network -->
-            <dependency>
-                <groupId>xyz.vopen.framework</groupId>
-                <artifactId>mixmicro-bolt-all</artifactId>
-                <version>${bolt.version}</version>
-            </dependency>
-
-            <dependency>
-                <groupId>org.jboss.resteasy</groupId>
-                <artifactId>resteasy-multipart-provider</artifactId>
-                <version>4.3.0.Final</version>
-            </dependency>
-
-            <dependency>
-                <groupId>org.jboss.resteasy</groupId>
-                <artifactId>resteasy-context-propagation</artifactId>
-                <version>4.3.0.Final</version>
-            </dependency>
-
             <dependency>
                 <groupId>com.google.code.gson</groupId>
                 <artifactId>gson</artifactId>
-                <version>2.8.6</version>
-            </dependency>
-
-            <dependency>
-                <groupId>xyz.vopen.cartier</groupId>
-                <artifactId>cartier-classpath-scanner</artifactId>
-                <version>1.1.0-RELEASE</version>
-            </dependency>
-
-            <dependency>
-                <groupId>org.mongodb</groupId>
-                <artifactId>bson</artifactId>
-                <version>${mongo.version}</version>
-            </dependency>
-
-            <dependency>
-                <groupId>org.mongodb</groupId>
-                <artifactId>mongodb-driver-core</artifactId>
-                <version>${mongo.version}</version>
-                <exclusions>
-                    <exclusion>
-                        <artifactId>bson</artifactId>
-                        <groupId>org.mongodb</groupId>
-                    </exclusion>
-                </exclusions>
+                <version>${gson.version}</version>
             </dependency>
 
         </dependencies>
 
     </dependencyManagement>
+
+    <profiles>
+        <profile>
+            <id>nacos-1.1.x</id>
+            <activation>
+                <activeByDefault>true</activeByDefault>
+            </activation>
+            <properties>
+                <nacos.client.version>1.1.4</nacos.client.version>
+            </properties>
+            <dependencyManagement>
+                <dependencies>
+                    <dependency>
+                        <groupId>com.alibaba.nacos</groupId>
+                        <artifactId>nacos-client</artifactId>
+                        <version>${nacos.client.version}</version>
+                    </dependency>
+                </dependencies>
+            </dependencyManagement>
+        </profile>
+
+        <profile>
+            <id>nacos-1.2.x</id>
+            <properties>
+                <nacos.client.version>1.2.1</nacos.client.version>
+            </properties>
+            <dependencyManagement>
+                <dependencies>
+                    <dependency>
+                        <groupId>com.alibaba.nacos</groupId>
+                        <artifactId>nacos-client</artifactId>
+                        <version>${nacos.client.version}</version>
+                    </dependency>
+                </dependencies>
+            </dependencyManagement>
+        </profile>
+
+        <profile>
+            <id>nacos-1.3.x</id>
+            <properties>
+                <nacos.client.version>1.3.3</nacos.client.version>
+            </properties>
+            <dependencyManagement>
+                <dependencies>
+                    <dependency>
+                        <groupId>com.alibaba.nacos</groupId>
+                        <artifactId>nacos-client</artifactId>
+                        <version>${nacos.client.version}</version>
+                    </dependency>
+                </dependencies>
+            </dependencyManagement>
+        </profile>
+
+        <profile>
+            <id>nacos-1.4.x</id>
+            <properties>
+                <nacos.client.version>1.4.0</nacos.client.version>
+            </properties>
+            <dependencyManagement>
+                <dependencies>
+                    <dependency>
+                        <groupId>com.alibaba.nacos</groupId>
+                        <artifactId>nacos-client</artifactId>
+                        <version>${nacos.client.version}</version>
+                    </dependency>
+                </dependencies>
+            </dependencyManagement>
+        </profile>
+    </profiles>
 
     <dependencies>
 

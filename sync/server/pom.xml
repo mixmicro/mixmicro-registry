@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <parent>
+        <groupId>xyz.vopen.framework</groupId>
+        <artifactId>mixmicro-registry-sync-all</artifactId>
+        <version>${revision}</version>
+    </parent>
+
+    <artifactId>mixmicro-registry-sync-server</artifactId>
+    <description>Mixmicro+ Registry Sync Server Module</description>
+
+
+</project>
