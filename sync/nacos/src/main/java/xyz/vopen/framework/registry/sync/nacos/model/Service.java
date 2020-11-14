@@ -1,6 +1,10 @@
 package xyz.vopen.framework.registry.sync.nacos.model;
 
-import lombok.*;
+import com.google.common.base.Joiner;
+import lombok.AllArgsConstructor;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
 
 import java.io.Serializable;
 
@@ -14,7 +18,6 @@ import java.io.Serializable;
  */
 @Getter
 @Setter
-@ToString
 @NoArgsConstructor
 @AllArgsConstructor
 public class Service implements Serializable {
@@ -31,4 +34,8 @@ public class Service implements Serializable {
 
   private int healthyInstanceCount;
 
+  @Override
+  public String toString() {
+    return Joiner.on("@@").join(clusterName, groupName, name);
+  }
 }

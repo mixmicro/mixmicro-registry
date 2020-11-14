@@ -1,5 +1,7 @@
 package xyz.vopen.framework.registry.sync.nacos;
 
+import java.text.SimpleDateFormat;
+
 /**
  * {@link NacosConstants}
  *
@@ -15,5 +17,15 @@ public final class NacosConstants {
    *
    * <p>
    */
-  public static final String SOURCE_NACOS_CONSOLE_ADDR_KEY = "${mixmicro.registry.sync.nacos.source.addr}";
+  public static final String SOURCE_NACOS_CONSOLE_ADDR_KEY = "${mixmicro.registry.sync.nacos.origin.console-addr}";
+
+  public static final String METADATA_SYNC_OWNER_KEY = "mixmicro.registry.sync.owner";
+
+  public static final String METADATA_SYNC_OWNER_VALUE = "syncer";
+
+  public static final String METADATA_SYNC_TIMESTAMP_KEY = "mixmicro.registry.sync.timestamp";
+
+  public static final String DEFAULT_FORMAT = "yyyy-MM-dd HH:mm:ss";
+
+  public static final ThreadLocal<SimpleDateFormat> DATE_FORMAT = ThreadLocal.withInitial(() -> new SimpleDateFormat(DEFAULT_FORMAT));
 }

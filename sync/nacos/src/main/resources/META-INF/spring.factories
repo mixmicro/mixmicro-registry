@@ -1,0 +1,3 @@
+org.springframework.boot.autoconfigure.EnableAutoConfiguration=\
+  xyz.vopen.framework.registry.sync.nacos.autoconfigure.NacosSyncServiceAutoConfiguration,\
+  xyz.vopen.framework.registry.sync.nacos.endpoint.NacosSyncEndpointsAutoConfiguration

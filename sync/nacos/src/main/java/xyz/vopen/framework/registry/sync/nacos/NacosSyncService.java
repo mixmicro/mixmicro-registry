@@ -11,6 +11,7 @@ package xyz.vopen.framework.registry.sync.nacos;
 public class NacosSyncService {
 
 
+
   public void initlize() {
 
 

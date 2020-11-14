@@ -32,6 +32,8 @@ public interface NacosService {
 
   String DEFAULT_CLUSTER_NAME = "DEFAULT";
 
+  String DEFAULT_NAMESPACE = "public";
+
   // ~~ Service Api Defined .
 
   /**
@@ -80,6 +82,17 @@ public interface NacosService {
    */
   @GET("/nacos/v1/console/namespaces")
   Response<List<Namespace>> namespaces(@Header("Authorization") String authorization, @Query("namespaceId") String namespaceId) throws NacosSyncException;
+
+  /**
+   * Get a list of all services registered in a public namespace .
+   *
+   * @param authorization auth token value
+   * @return list instance of {@link ServiceResponse}
+   * @throws NacosSyncException maybe thrown {@link NacosSyncException}
+   */
+  default ServiceResponse services(String authorization) throws NacosSyncException {
+    return this.services(authorization, DEFAULT_NAMESPACE, "");
+  }
 
   /**
    * Get a list of all services registered in a given namespace.

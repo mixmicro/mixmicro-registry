@@ -44,10 +44,10 @@ public class NacosServiceTester {
     System.out.println(JSON.toJSONString(services, false));
 
     // FOREACH <services>
-    Service instance = services.getServiceList().get(0);
+    Service service = services.getServiceList().get(0);
 
     // FOREACH register <instances>
-    InstanceResponse instances = nacosService.instances(authorization, "m-yback","public");
+    InstanceResponse instances = nacosService.instances(authorization, service.getName(),"public");
 
     System.out.println(JSON.toJSONString(instances, true));
 
