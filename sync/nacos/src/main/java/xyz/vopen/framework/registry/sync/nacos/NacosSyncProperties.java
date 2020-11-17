@@ -1,10 +1,16 @@
 package xyz.vopen.framework.registry.sync.nacos;
 
+import com.google.common.collect.Sets;
 import lombok.*;
+import org.apache.commons.lang3.StringUtils;
+import org.springframework.beans.factory.InitializingBean;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.boot.context.properties.NestedConfigurationProperty;
+import org.springframework.lang.NonNull;
 
 import java.io.Serializable;
+import java.util.Objects;
+import java.util.Set;
 
 import static xyz.vopen.framework.registry.sync.nacos.NacosSyncProperties.PREFIX;
 
@@ -22,7 +28,7 @@ import static xyz.vopen.framework.registry.sync.nacos.NacosSyncProperties.PREFIX
 @NoArgsConstructor
 @AllArgsConstructor
 @ConfigurationProperties(prefix = PREFIX)
-public class NacosSyncProperties implements Serializable {
+public class NacosSyncProperties implements Serializable, InitializingBean {
 
   public static final String PREFIX = "mixmicro.registry.sync.nacos";
 
@@ -30,6 +36,15 @@ public class NacosSyncProperties implements Serializable {
 
   @NestedConfigurationProperty private Destination destination;
 
+  @Builder.Default
+  @NestedConfigurationProperty private SyncRule syncRule = new SyncRule();
+
+  @Override
+  public void afterPropertiesSet() {
+    if(syncRule != null) {
+      syncRule.afterPropertiesSet();
+    }
+  }
 
   // ~~ inner class
 
@@ -42,10 +57,11 @@ public class NacosSyncProperties implements Serializable {
 
     private String consoleAddr;
 
+    private String serverAddr;
+
     private String username;
 
     private String password;
-
   }
 
   @Getter
@@ -56,7 +72,58 @@ public class NacosSyncProperties implements Serializable {
   public static class Destination implements Serializable {
 
     private String serverAddr;
-
   }
 
+  @Getter
+  @Setter
+  @Builder
+  @NoArgsConstructor
+  @AllArgsConstructor
+  public static class SyncRule implements Serializable, InitializingBean {
+
+    private static final String ALL_REGULAR = "*";
+
+    private static final String SEPARATOR = ";";
+
+    private static final Set<String> namespaces = Sets.newHashSet();
+    private static final Set<String> services = Sets.newHashSet();
+
+    @Builder.Default private String namespaceRegular = ALL_REGULAR;
+
+    @Builder.Default private String serviceRegular = ALL_REGULAR;
+
+    public boolean matchNamespace(@NonNull String namespace) {
+      if (StringUtils.isBlank(namespace)) {
+        return true;
+      }
+
+      if (Objects.equals(ALL_REGULAR, namespaceRegular)) {
+        return true;
+      }
+
+      return namespaces.contains(namespace.toLowerCase());
+    }
+
+    public boolean matchService(@NonNull String serviceName) {
+      if (StringUtils.isBlank(serviceName)) {
+        return true;
+      }
+
+      if (Objects.equals(ALL_REGULAR, serviceRegular)) {
+        return true;
+      }
+
+      return services.contains(serviceName.toLowerCase());
+    }
+
+    @Override
+    public void afterPropertiesSet() {
+      for (String temp : namespaceRegular.split(SEPARATOR)) {
+        namespaces.add(temp.toLowerCase());
+      }
+      for (String temp : serviceRegular.split(SEPARATOR)) {
+        services.add(temp.toLowerCase());
+      }
+    }
+  }
 }

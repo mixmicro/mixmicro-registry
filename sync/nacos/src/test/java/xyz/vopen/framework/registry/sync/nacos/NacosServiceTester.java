@@ -1,6 +1,5 @@
 package xyz.vopen.framework.registry.sync.nacos;
 
-import com.alibaba.fastjson.JSON;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -8,6 +7,9 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.junit4.SpringRunner;
 import xyz.vopen.framework.registry.sync.nacos.model.Namespace;
 import xyz.vopen.framework.registry.sync.nacos.model.Service;
+import xyz.vopen.framework.registry.sync.nacos.model.response.InstanceResponse;
+import xyz.vopen.framework.registry.sync.nacos.model.response.Response;
+import xyz.vopen.framework.registry.sync.nacos.model.response.ServiceResponse;
 
 import java.util.List;
 
@@ -36,12 +38,12 @@ public class NacosServiceTester {
 
     Response<List<Namespace>> namespaces = nacosService.namespaces(authorization);
 
-    System.out.println(JSON.toJSONString(namespaces, false));
+//    System.out.println(JSON.toJSONString(namespaces, false));
 
     // FOREACH <namespaces>
     ServiceResponse services = nacosService.services(authorization, "public");
 
-    System.out.println(JSON.toJSONString(services, false));
+//    System.out.println(JSON.toJSONString(services, false));
 
     // FOREACH <services>
     Service service = services.getServiceList().get(0);
@@ -49,7 +51,7 @@ public class NacosServiceTester {
     // FOREACH register <instances>
     InstanceResponse instances = nacosService.instances(authorization, service.getName(),"public");
 
-    System.out.println(JSON.toJSONString(instances, true));
+//    System.out.println(JSON.toJSONString(instances, true));
 
     // FOREACH subscribe <services>
 

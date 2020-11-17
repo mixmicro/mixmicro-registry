@@ -6,7 +6,7 @@ import com.alibaba.nacos.api.naming.listener.NamingEvent;
 import com.google.common.base.Joiner;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import xyz.vopen.framework.registry.sync.nacos.InstanceResponse;
+import xyz.vopen.framework.registry.sync.nacos.model.response.InstanceResponse;
 import xyz.vopen.framework.registry.sync.nacos.NacosService;
 import xyz.vopen.framework.registry.sync.nacos.ServiceThread;
 import xyz.vopen.framework.registry.sync.nacos.model.Instance;
@@ -53,6 +53,7 @@ public class NacosRegisterServiceExecutor extends ServiceThread {
       String namespaceId,
       String authorization,
       Service service) {
+    super();
     this.authorization = authorization;
     this.namespaceId = namespaceId;
     this.originNamingService = originNamingService;

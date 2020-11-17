@@ -25,7 +25,8 @@ public class NacosDiscoveryTest {
 
     Properties properties = new Properties();
     properties.put(PropertyKeyConst.NAMESPACE, "public");
-    properties.put(PropertyKeyConst.SERVER_ADDR, "beta-middle.hgj.net:8848");
+//    properties.put(PropertyKeyConst.SERVER_ADDR, "beta-middle.hgj.net:8848");
+    properties.put(PropertyKeyConst.SERVER_ADDR, "10.10.10.62:8864");
     NamingService namingService = new NacosNamingService(properties);
 
     new Thread(

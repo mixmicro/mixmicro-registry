@@ -2,6 +2,9 @@ package xyz.vopen.framework.registry.sync.nacos;
 
 import retrofit2.http.*;
 import xyz.vopen.framework.registry.sync.nacos.model.Namespace;
+import xyz.vopen.framework.registry.sync.nacos.model.response.InstanceResponse;
+import xyz.vopen.framework.registry.sync.nacos.model.response.Response;
+import xyz.vopen.framework.registry.sync.nacos.model.response.ServiceResponse;
 import xyz.vopen.mixmicro.components.boot.httpclient.MixHttpClientLogStrategy;
 import xyz.vopen.mixmicro.components.boot.httpclient.annotation.MixHttpClient;
 

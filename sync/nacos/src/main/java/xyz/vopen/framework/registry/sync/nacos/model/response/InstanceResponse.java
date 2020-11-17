@@ -1,4 +1,4 @@
-package xyz.vopen.framework.registry.sync.nacos;
+package xyz.vopen.framework.registry.sync.nacos.model.response;
 
 import lombok.*;
 import xyz.vopen.framework.registry.sync.nacos.model.Instance;

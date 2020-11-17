@@ -2,9 +2,6 @@ package xyz.vopen.framework.registry.sync.nacos;
 
 import com.alibaba.nacos.api.PropertyKeyConst;
 import com.alibaba.nacos.api.naming.NamingService;
-import com.alibaba.nacos.api.naming.listener.Event;
-import com.alibaba.nacos.api.naming.listener.EventListener;
-import com.alibaba.nacos.api.naming.listener.NamingEvent;
 import com.alibaba.nacos.api.naming.pojo.Instance;
 import com.alibaba.nacos.client.naming.NacosNamingService;
 import com.google.common.collect.Maps;
@@ -25,8 +22,7 @@ public class NacosClientTest {
   public static void main(String[] args) throws Exception {
 
     Properties properties = new Properties();
-    properties.put(PropertyKeyConst.NAMESPACE, "public");
-    properties.put(PropertyKeyConst.SERVER_ADDR, "beta-middle.hgj.net:8848");
+    properties.put(PropertyKeyConst.SERVER_ADDR, "beta-middle.hgj.net:8864");
     NamingService namingService = new NacosNamingService(properties);
 
     String serviceName = "mixmicro-register-demo-service-name";
