@@ -44,6 +44,8 @@ public class NacosRegisterServiceExecutor extends ServiceThread {
 
   private final Service service;
 
+  private final boolean deregister;
+
   public NacosRegisterServiceExecutor(
       // Nacos Naming Service Instance
       NamingService originNamingService,
@@ -53,6 +55,19 @@ public class NacosRegisterServiceExecutor extends ServiceThread {
       String namespaceId,
       String authorization,
       Service service) {
+    this(originNamingService, destNamingService, nacosService, namespaceId, authorization, service, false);
+  }
+
+  public NacosRegisterServiceExecutor(
+      // Nacos Naming Service Instance
+      NamingService originNamingService,
+      NamingService destNamingService,
+      // Nacos Console Service
+      NacosService nacosService,
+      String namespaceId,
+      String authorization,
+      Service service,
+      boolean deregister) {
     super();
     this.authorization = authorization;
     this.namespaceId = namespaceId;
@@ -60,6 +75,7 @@ public class NacosRegisterServiceExecutor extends ServiceThread {
     this.destNamingService = destNamingService;
     this.nacosService = nacosService;
     this.service = service;
+    this.deregister = deregister;
   }
 
   @Override
@@ -98,8 +114,12 @@ public class NacosRegisterServiceExecutor extends ServiceThread {
                 Set<String> instanceKeySet = new HashSet<>();
 
                 log.info("[SUBSCRIBE] received service event , {} | {} | {}",
-                    namingEvent.getServiceName(), namingEvent.getGroupName(), namingEvent.getInstances() == null ? 0 : namingEvent.getInstances().size());
+                    namingEvent.getServiceName(), service.getGroupName(), namingEvent.getInstances() == null ? 0 : namingEvent.getInstances().size());
 
+                // find all service s instance from origin nacos cluster .
+                // warning ::
+                //    if source cluster nginx is reloaded , need to be shutdown origin -> dest syncer server .
+                //
                 List<com.alibaba.nacos.api.naming.pojo.Instance> sourceInstances = originNamingService.getAllInstances(service.getName(), service.getGroupName());
 
                 // register instance .
@@ -109,11 +129,14 @@ public class NacosRegisterServiceExecutor extends ServiceThread {
                 }
 
                 // unregister instance .
-                List<com.alibaba.nacos.api.naming.pojo.Instance> destInstances = destNamingService.getAllInstances(service.getName(), service.getGroupName());
 
-                for (com.alibaba.nacos.api.naming.pojo.Instance temp : destInstances) {
-                  if(isSyncOwner(temp.getMetadata()) && !instanceKeySet.contains(composeInstanceKey(temp))) {
-                    destNamingService.deregisterInstance(service.getName(), temp.getIp(), temp.getPort());
+                if(deregister) { // check is deregister enabled ?
+                  List<com.alibaba.nacos.api.naming.pojo.Instance> destInstances = destNamingService.getAllInstances(service.getName(), service.getGroupName());
+
+                  for (com.alibaba.nacos.api.naming.pojo.Instance temp : destInstances) {
+                    if(isSyncOwner(temp.getMetadata()) && !instanceKeySet.contains(composeInstanceKey(temp))) {
+                      destNamingService.deregisterInstance(service.getName(), temp.getIp(), temp.getPort());
+                    }
                   }
                 }
 

@@ -19,6 +19,8 @@ public final class NacosConstants {
    */
   public static final String SOURCE_NACOS_CONSOLE_ADDR_KEY = "${mixmicro.registry.sync.nacos.origin.console-addr}";
 
+  public static final String DEST_NACOS_CONSOLE_ADDR_KEY = "${mixmicro.registry.sync.nacos.destination.console-addr}";
+
   public static final String METADATA_SYNC_OWNER_KEY = "mixmicro.registry.sync.owner";
 
   public static final String METADATA_SYNC_OWNER_VALUE = "syncer";

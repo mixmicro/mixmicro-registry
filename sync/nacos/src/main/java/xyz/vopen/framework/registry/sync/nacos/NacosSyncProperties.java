@@ -39,6 +39,12 @@ public class NacosSyncProperties implements Serializable, InitializingBean {
   @Builder.Default
   @NestedConfigurationProperty private SyncRule syncRule = new SyncRule();
 
+  /**
+   * is enabled deregister flag .
+   * <p>default: false</p>
+   */
+  @Builder.Default private boolean deregister = false;
+
   @Override
   public void afterPropertiesSet() {
     if(syncRule != null) {
@@ -72,6 +78,8 @@ public class NacosSyncProperties implements Serializable, InitializingBean {
   public static class Destination implements Serializable {
 
     private String serverAddr;
+
+    private String consoleAddr;
   }
 
   @Getter
