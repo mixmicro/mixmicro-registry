@@ -25,6 +25,8 @@ public final class NacosConstants {
 
   public static final String METADATA_SYNC_OWNER_VALUE = "syncer";
 
+  public static final String METADATA_SYNC_REBUILD_VALUE = "rebuild";
+
   public static final String METADATA_SYNC_TIMESTAMP_KEY = "mixmicro.registry.sync.timestamp";
 
   public static final String DEFAULT_FORMAT = "yyyy-MM-dd HH:mm:ss";

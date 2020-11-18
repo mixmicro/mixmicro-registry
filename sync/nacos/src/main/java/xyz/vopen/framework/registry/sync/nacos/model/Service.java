@@ -34,6 +34,8 @@ public class Service implements Serializable {
 
   private int healthyInstanceCount;
 
+  private boolean triggerFlag;
+
   @Override
   public String toString() {
     return Joiner.on("@@").join(clusterName, groupName, name);

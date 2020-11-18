@@ -11,6 +11,7 @@ import org.springframework.lang.NonNull;
 import java.io.Serializable;
 import java.util.Objects;
 import java.util.Set;
+import java.util.concurrent.TimeUnit;
 
 import static xyz.vopen.framework.registry.sync.nacos.NacosSyncProperties.PREFIX;
 
@@ -44,6 +45,8 @@ public class NacosSyncProperties implements Serializable, InitializingBean {
    * <p>default: false</p>
    */
   @Builder.Default private boolean deregister = false;
+
+  @Builder.Default private Rebuild rebuild = new Rebuild();
 
   @Override
   public void afterPropertiesSet() {
@@ -80,6 +83,20 @@ public class NacosSyncProperties implements Serializable, InitializingBean {
     private String serverAddr;
 
     private String consoleAddr;
+  }
+
+  @Getter
+  @Setter
+  @Builder
+  @NoArgsConstructor
+  @AllArgsConstructor
+  public static class Rebuild implements Serializable {
+
+    @Builder.Default private boolean enabled = true;
+
+    @Builder.Default private long checkInterval = 5000;
+
+    @Builder.Default private TimeUnit timeUnit = TimeUnit.MILLISECONDS;
   }
 
   @Getter

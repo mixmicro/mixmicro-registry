@@ -80,28 +80,6 @@ public abstract class ServiceThread implements Runnable {
     return JOIN_TIME;
   }
 
-  @Deprecated
-  public void stop() {
-    this.stop(false);
-  }
-
-  @Deprecated
-  public void stop(final boolean interrupt) {
-    if (!started.get()) {
-      return;
-    }
-    this.stopped = true;
-    log.info("stop thread " + this.getServiceName() + " interrupt " + interrupt);
-
-    if (hasNotified.compareAndSet(false, true)) {
-      waitPoint.countDown(); // notify
-    }
-
-    if (interrupt) {
-      this.thread.interrupt();
-    }
-  }
-
   public void makeStop() {
     if (!started.get()) {
       return;

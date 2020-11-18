@@ -1,5 +1,6 @@
 package xyz.vopen.framework.registry.sync.nacos;
 
+import com.alibaba.fastjson.JSON;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -10,11 +11,13 @@ import xyz.vopen.framework.registry.sync.nacos.model.Service;
 import xyz.vopen.framework.registry.sync.nacos.model.response.InstanceResponse;
 import xyz.vopen.framework.registry.sync.nacos.model.response.Response;
 import xyz.vopen.framework.registry.sync.nacos.model.response.ServiceResponse;
+import xyz.vopen.framework.registry.sync.nacos.v13x.Nacos13xService;
+import xyz.vopen.framework.registry.sync.nacos.v13x.model.AccessToken;
 
 import java.util.List;
 
 /**
- * {@link NacosServiceTester}
+ * {@link Nacos13xServiceTester}
  *
  * <p>Class NacosServiceTester Definition
  *
@@ -23,47 +26,33 @@ import java.util.List;
  */
 @RunWith(SpringRunner.class)
 @SpringBootTest(classes = NacosClientApp.class)
-public class NacosServiceTester {
+public class Nacos13xServiceTester {
 
-  @Autowired private NacosService nacosService;
+  @Autowired private Nacos13xService nacos13xService;
 
   @Test
   public void login() throws Exception {
 
-    Response<String> response = nacosService.login("nacos", "nacos");
+    AccessToken accessToken = nacos13xService.login("nacos", "nacos");
 
-    System.out.println(response);
+    Response<List<Namespace>> namespaces = nacos13xService.namespaces(accessToken);
 
-    String authorization = response.getData();
-
-    Response<List<Namespace>> namespaces = nacosService.namespaces(authorization);
-
-//    System.out.println(JSON.toJSONString(namespaces, false));
+    System.out.println(JSON.toJSONString(namespaces, false));
 
     // FOREACH <namespaces>
-    ServiceResponse services = nacosService.services(authorization, "public");
+    ServiceResponse services = nacos13xService.services(accessToken.toString(), accessToken.getAccessToken(), "public");
 
-//    System.out.println(JSON.toJSONString(services, false));
+    System.out.println(JSON.toJSONString(services, false));
 
     // FOREACH <services>
     Service service = services.getServiceList().get(0);
 
     // FOREACH register <instances>
-    InstanceResponse instances = nacosService.instances(authorization, service.getName(),"public");
+    InstanceResponse instances = nacos13xService.instances(accessToken, service.getName(),"public");
 
-//    System.out.println(JSON.toJSONString(instances, true));
+    System.out.println(JSON.toJSONString(instances, true));
 
-    // FOREACH subscribe <services>
-
-    /*
-    namingService.subscribe("service-name", new EventListener() {
-      @Override
-      public void onEvent(Event event) {
-        NamingEvent namingEvent = (NamingEvent) event;
-        //
-      }
-    });
-    */
+//    // FOREACH subscribe <services>
 
   }
 }

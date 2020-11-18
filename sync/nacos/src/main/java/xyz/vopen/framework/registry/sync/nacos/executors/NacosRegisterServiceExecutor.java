@@ -6,18 +6,17 @@ import com.alibaba.nacos.api.naming.listener.NamingEvent;
 import com.google.common.base.Joiner;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import xyz.vopen.framework.registry.sync.nacos.model.response.InstanceResponse;
 import xyz.vopen.framework.registry.sync.nacos.NacosService;
 import xyz.vopen.framework.registry.sync.nacos.ServiceThread;
+import xyz.vopen.framework.registry.sync.nacos.event.SyncedServiceRebuildEvent;
 import xyz.vopen.framework.registry.sync.nacos.model.Instance;
 import xyz.vopen.framework.registry.sync.nacos.model.Service;
+import xyz.vopen.framework.registry.sync.nacos.model.response.InstanceResponse;
+import xyz.vopen.mixmicro.kits.event.EventBus;
 
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 
-import static xyz.vopen.framework.registry.sync.nacos.NacosConstants.METADATA_SYNC_OWNER_KEY;
+import static xyz.vopen.framework.registry.sync.nacos.NacosConstants.*;
 import static xyz.vopen.framework.registry.sync.nacos.model.Instance.build;
 
 /**
@@ -124,8 +123,15 @@ public class NacosRegisterServiceExecutor extends ServiceThread {
 
                 // register instance .
                 for (com.alibaba.nacos.api.naming.pojo.Instance temp : sourceInstances) {
-                  registerInstance(service.getName(), service.getGroupName(), build(temp));
-                  instanceKeySet.add(composeInstanceKey(temp));
+
+                  // check instance is from rebuild execute.?
+                  if(!isRebuildOwner(temp.getMetadata())) {
+                    registerInstance(service.getName(), service.getGroupName(), build(temp));
+                    instanceKeySet.add(composeInstanceKey(temp));
+
+                    // post rebuild event .
+                    EventBus.post(SyncedServiceRebuildEvent.builder().service(service).build());
+                  }
                 }
 
                 // unregister instance .
@@ -173,7 +179,11 @@ public class NacosRegisterServiceExecutor extends ServiceThread {
   }
 
   private boolean isSyncOwner(Map<String, String> metadata) {
-    return metadata.containsKey(METADATA_SYNC_OWNER_KEY);
+    return metadata.containsKey(METADATA_SYNC_OWNER_KEY) && Objects.equals(METADATA_SYNC_OWNER_VALUE, metadata.get(METADATA_SYNC_OWNER_KEY));
+  }
+
+  private boolean isRebuildOwner(Map<String, String> metadata) {
+    return metadata.containsKey(METADATA_SYNC_OWNER_KEY) && Objects.equals(METADATA_SYNC_REBUILD_VALUE, metadata.get(METADATA_SYNC_OWNER_KEY));
   }
 
   @Override

@@ -8,6 +8,7 @@ import com.google.common.collect.Maps;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import xyz.vopen.framework.registry.sync.nacos.executors.NacosRegisterServiceExecutor;
+import xyz.vopen.framework.registry.sync.nacos.executors.RebuildNacosServiceExecutor;
 import xyz.vopen.framework.registry.sync.nacos.model.Namespace;
 import xyz.vopen.framework.registry.sync.nacos.model.Service;
 import xyz.vopen.framework.registry.sync.nacos.model.response.Response;
@@ -39,6 +40,8 @@ public class NacosSyncService {
 
   private final NacosService nacosService;
 
+  private RebuildNacosServiceExecutor rebuildExecutor;
+
   private final Map<String, ServiceThread> nsmap = Maps.newConcurrentMap();
 
   public NacosSyncService(NacosSyncProperties properties, NacosService nacosService) {
@@ -65,6 +68,14 @@ public class NacosSyncService {
       destProperties.put(PropertyKeyConst.SERVER_ADDR, destination.getServerAddr());
 
       NamingService destNamingService = new NacosNamingService(destProperties);
+
+      // check rebuild service .
+      if(properties.getRebuild().isEnabled()) {
+        if(rebuildExecutor == null) {
+          rebuildExecutor = new RebuildNacosServiceExecutor(originNamingService, destNamingService, properties.getRebuild());
+          rebuildExecutor.initialize();
+        }
+      }
 
       // login
       Response<String> ar = nacosService.login(origin.getUsername(), origin.getPassword());
@@ -135,13 +146,22 @@ public class NacosSyncService {
   @PreDestroy
   public void destroy() {
 
-    nsmap.forEach(
-        (name, serviceThread) -> {
-          try {
-            serviceThread.shutdown();
-          } catch (Exception e) {
-            log.warn("[SS] task: {} ,shutdown interrupted .", name);
-          }
-        });
+    if(startup.compareAndSet(true, false)) {
+
+      if(properties.getRebuild().isEnabled() && rebuildExecutor != null) {
+        rebuildExecutor.destroy();
+      }
+
+      nsmap.forEach(
+          (name, serviceThread) -> {
+            try {
+              serviceThread.shutdown();
+            } catch (Exception e) {
+              log.warn("[SS] task: {} ,shutdown interrupted .", name);
+            }
+          });
+    }
+
+
   }
 }

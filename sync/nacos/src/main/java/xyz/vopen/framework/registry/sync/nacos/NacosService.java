@@ -22,7 +22,7 @@ import static xyz.vopen.framework.registry.sync.nacos.NacosConstants.SOURCE_NACO
  */
 @MixHttpClient(
     baseUrl = SOURCE_NACOS_CONSOLE_ADDR_KEY,
-    logStrategy = MixHttpClientLogStrategy.HEADERS)
+    logStrategy = MixHttpClientLogStrategy.BASIC)
 public interface NacosService {
 
   // ~~ Default Constants Fields .
