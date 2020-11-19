@@ -14,7 +14,7 @@ import java.util.Map;
  * @author <a href="mailto:iskp.me@gmail.com">Elve.Xu</a>
  * @version ${project.version} - 2020/11/14
  */
-@Endpoint(id = "nacos-sync-status")
+@Endpoint(id = "nacossyncstatus")
 public class NacosSyncStatusEndpoint {
 
 

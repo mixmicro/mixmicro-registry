@@ -7,18 +7,23 @@ import com.google.common.base.Joiner;
 import com.google.common.collect.Maps;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import xyz.vopen.framework.registry.sync.nacos.executors.NacosExecutorManager;
 import xyz.vopen.framework.registry.sync.nacos.executors.NacosRegisterServiceExecutor;
 import xyz.vopen.framework.registry.sync.nacos.executors.RebuildNacosServiceExecutor;
 import xyz.vopen.framework.registry.sync.nacos.model.Namespace;
 import xyz.vopen.framework.registry.sync.nacos.model.Service;
 import xyz.vopen.framework.registry.sync.nacos.model.response.Response;
 import xyz.vopen.framework.registry.sync.nacos.model.response.ServiceResponse;
+import xyz.vopen.mixmicro.kits.thread.ThreadKit;
 
 import javax.annotation.PreDestroy;
 import java.util.List;
 import java.util.Map;
 import java.util.Properties;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicReference;
+
+import static xyz.vopen.framework.registry.sync.nacos.NacosConstants.DEFAULT_NAMESPACE_THREAD_NAME;
 
 /**
  * {@link NacosSyncService}
@@ -32,8 +37,6 @@ public class NacosSyncService {
 
   private final Logger log = LoggerFactory.getLogger(NacosSyncService.class);
 
-  private static final String DEFAULT_NAMESPACE_THREAD_NAME = "NS-THREAD";
-
   private final static AtomicBoolean startup = new AtomicBoolean(false);
 
   private final NacosSyncProperties properties;
@@ -43,6 +46,14 @@ public class NacosSyncService {
   private RebuildNacosServiceExecutor rebuildExecutor;
 
   private final Map<String, ServiceThread> nsmap = Maps.newConcurrentMap();
+
+  private final AtomicReference<String> authorizationRef = new AtomicReference<>();
+
+  // ~~ namespaced naming service cache
+  private final Map<String, NamingService> dnssc = Maps.newConcurrentMap();
+  private final Map<String, NamingService> onssc = Maps.newConcurrentMap();
+
+  private ServiceThread fixServiceThread;
 
   public NacosSyncService(NacosSyncProperties properties, NacosService nacosService) {
     this.properties = properties;
@@ -57,22 +68,11 @@ public class NacosSyncService {
 
       // build origin nacos naming service
       NacosSyncProperties.Origin origin = properties.getOrigin();
-      Properties originProperties = new Properties();
-      originProperties.put(PropertyKeyConst.SERVER_ADDR, origin.getServerAddr());
-
-      NamingService originNamingService = new NacosNamingService(originProperties);
-
-      // build dest nacos naming service
-      NacosSyncProperties.Destination destination = properties.getDestination();
-      Properties destProperties = new Properties();
-      destProperties.put(PropertyKeyConst.SERVER_ADDR, destination.getServerAddr());
-
-      NamingService destNamingService = new NacosNamingService(destProperties);
 
       // check rebuild service .
       if(properties.getRebuild().isEnabled()) {
         if(rebuildExecutor == null) {
-          rebuildExecutor = new RebuildNacosServiceExecutor(originNamingService, destNamingService, properties.getRebuild());
+          rebuildExecutor = new RebuildNacosServiceExecutor(onssc, dnssc, properties.getRebuild());
           rebuildExecutor.initialize();
         }
       }
@@ -82,64 +82,158 @@ public class NacosSyncService {
 
       String authorization = ar.getData();
 
-      log.info("[SS] Authorization : {}", authorization);
+      authorizationRef.set(authorization);
 
-      Response<List<Namespace>> namespacesResponse = nacosService.namespaces(authorization);
+      this.startup0(); // ~~
 
-      List<Namespace> namespaces = namespacesResponse.getData();
-
-      final NacosSyncProperties.SyncRule rule = properties.getSyncRule();
-
-      for (Namespace namespace : namespaces) {
-
-        if(!rule.matchNamespace(namespace.getNamespaceShowName())) {
-          continue;
-        }
-
-        log.info("[SS] begin to execute namespace : {}@@{} sync task .", namespace.getNamespace(), namespace.getNamespaceShowName());
-
-        ServiceThread namespaceServiceThread = new ServiceThread() {
-
-          @Override
-          public String getServiceName() {
-            return Joiner.on("@@").join(DEFAULT_NAMESPACE_THREAD_NAME, namespace.getNamespace(), namespace.getNamespaceShowName());
-          }
-
-          @Override
-          public void run() {
-
-            ServiceResponse serviceResponse = nacosService.services(authorization, namespace.getNamespace());
-
-            if(serviceResponse != null) {
-              List<Service> services = serviceResponse.getServiceList();
-
-              for(Service service : services) {
-                if(service != null) {
-
-                  if(!rule.matchService(service.getName())) {
-                    continue;
-                  }
-                  NacosRegisterServiceExecutor executor = new NacosRegisterServiceExecutor(originNamingService, destNamingService, nacosService, namespace.getNamespace(), authorization, service);
-                  log.info("[SSE] execute service sync , service name :{}", service.getName());
-                  // execute directly
-                  executor.run();
-                }
-              }
-            }
-          }
-        };
-
-        // Start
-        namespaceServiceThread.start();
-
-        // ADD
-        nsmap.putIfAbsent(namespaceServiceThread.getServiceName(), namespaceServiceThread);
+      if(properties.getFix().isEnabled()) {
+        fixServiceThread = new FixServiceThread(properties.getFix().getDelay(), properties.getFix().getCheckInterval());
+        fixServiceThread.setDaemon(true);
+        fixServiceThread.start();
       }
+
     } else {
       log.warn("[SS] sync service is started .");
     }
-
   }
+
+
+  private void startup0() {
+
+    String authorization = authorizationRef.get();
+
+    log.info("[SS] Authorization : {}", authorization);
+
+    Response<List<Namespace>> namespacesResponse = nacosService.namespaces(authorization);
+
+    List<Namespace> namespaces = namespacesResponse.getData();
+
+    final NacosSyncProperties.SyncRule rule = properties.getSyncRule();
+
+    for (Namespace namespace : namespaces) {
+
+      String key = Joiner.on("@@").join(DEFAULT_NAMESPACE_THREAD_NAME, namespace.getNamespace(), namespace.getNamespaceShowName());
+
+      if(!rule.matchNamespace(namespace.getNamespaceShowName())) {
+        continue;
+      }
+
+      if(!dnssc.containsKey(key)) {
+        // build dest nacos naming service
+        NacosSyncProperties.Destination destination = properties.getDestination();
+        Properties destProperties = new Properties();
+        destProperties.put(PropertyKeyConst.NAMESPACE, namespace.getNamespace());
+        destProperties.put(PropertyKeyConst.SERVER_ADDR, destination.getServerAddr());
+        NamingService tempdns = new NacosNamingService(destProperties);
+        dnssc.put(key, tempdns);
+      }
+
+      if(!onssc.containsKey(key)) {
+        // build origin nacos naming service
+        NacosSyncProperties.Origin origin = properties.getOrigin();
+        Properties originProperties = new Properties();
+        originProperties.put(PropertyKeyConst.NAMESPACE, namespace.getNamespace());
+        originProperties.put(PropertyKeyConst.SERVER_ADDR, origin.getServerAddr());
+
+        NamingService tempons = new NacosNamingService(originProperties);
+        onssc.put(key, tempons);
+      }
+
+      log.info("[SS] begin to execute namespace : {}@@{} sync task .", namespace.getNamespace(), namespace.getNamespaceShowName());
+
+      ServiceThread namespaceServiceThread = new ServiceThread() {
+
+        @Override
+        public String getServiceName() {
+          return key;
+        }
+
+        @Override
+        public void run() {
+
+          ServiceResponse serviceResponse = nacosService.services(authorization, namespace.getNamespace());
+
+          if(serviceResponse != null) {
+            List<Service> services = serviceResponse.getServiceList();
+
+            for(Service service : services) {
+              if(service != null) {
+
+                if(!rule.matchService(service.getName())) {
+                  continue;
+                }
+
+                if(NacosExecutorManager.manager().containsKey(namespace, service)) {
+                  continue;
+                }
+
+                // add service cache.
+                NacosExecutorManager.manager().putIfAbsent(namespace, service);
+
+                // build service executor
+                NacosRegisterServiceExecutor executor = new NacosRegisterServiceExecutor(onssc, dnssc, nacosService, namespace, authorization, service);
+                log.info("[SSE] execute service sync , service name :{}", service.getName());
+                // execute directly
+                executor.run();
+              }
+            }
+          }
+        }
+      };
+
+      // Start
+      namespaceServiceThread.start();
+
+      // ADD
+      ServiceThread ot = nsmap.putIfAbsent(namespaceServiceThread.getServiceName(), namespaceServiceThread);
+
+      if(ot != null) {
+        ot.shutdown();
+      }
+    }
+  }
+
+
+  private class FixServiceThread extends ServiceThread {
+
+    private static final String NAME = "NS-FIX-THREAD";
+
+    private final long delay;
+    private final long checkInterval;
+
+    private FixServiceThread(long delay, long checkInterval) {
+      this.delay = delay;
+      this.checkInterval = checkInterval;
+    }
+
+    @Override
+    public String getServiceName() {
+      return NAME;
+    }
+
+    @Override
+    public void run() {
+
+      try{
+
+        ThreadKit.sleep(delay);
+
+        while (!isStopped()) {
+          try{
+            startup0();
+          } catch (Exception e) {
+            log.warn("[FIX] fix thread startup0 failed", e);
+          } finally{
+            ThreadKit.sleep(checkInterval);
+          }
+        }
+
+      } catch (Exception e) {
+        log.warn("[FIX] fix thread execute failed", e);
+      }
+    }
+  }
+
 
   // ~~ destroy method .
 
@@ -150,6 +244,10 @@ public class NacosSyncService {
 
       if(properties.getRebuild().isEnabled() && rebuildExecutor != null) {
         rebuildExecutor.destroy();
+      }
+
+      if(properties.getFix().isEnabled() && fixServiceThread != null) {
+        fixServiceThread.shutdown();
       }
 
       nsmap.forEach(

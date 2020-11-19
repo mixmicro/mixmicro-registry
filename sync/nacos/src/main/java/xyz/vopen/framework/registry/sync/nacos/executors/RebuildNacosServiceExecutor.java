@@ -3,6 +3,7 @@ package xyz.vopen.framework.registry.sync.nacos.executors;
 import com.alibaba.nacos.api.exception.NacosException;
 import com.alibaba.nacos.api.naming.NamingService;
 import com.alibaba.nacos.api.naming.pojo.Instance;
+import com.google.common.base.Joiner;
 import com.google.common.collect.Maps;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -10,7 +11,9 @@ import org.springframework.lang.NonNull;
 import xyz.vopen.framework.registry.sync.nacos.NacosSyncProperties;
 import xyz.vopen.framework.registry.sync.nacos.ServiceThread;
 import xyz.vopen.framework.registry.sync.nacos.event.SyncedServiceRebuildEvent;
+import xyz.vopen.framework.registry.sync.nacos.model.Namespace;
 import xyz.vopen.framework.registry.sync.nacos.model.Service;
+import xyz.vopen.mixmicro.kits.Assert;
 import xyz.vopen.mixmicro.kits.event.Event;
 import xyz.vopen.mixmicro.kits.event.EventBus;
 import xyz.vopen.mixmicro.kits.event.Subscriber;
@@ -35,9 +38,9 @@ public class RebuildNacosServiceExecutor {
 
   private static final Logger log = LoggerFactory.getLogger(RebuildNacosServiceExecutor.class);
 
-  final NamingService originNamingService;
+  final Map<String, NamingService> originNamingServices;
 
-  final NamingService destNamingService;
+  final Map<String, NamingService> destNamingServices;
 
   final NacosSyncProperties.Rebuild rebuild;
 
@@ -50,14 +53,14 @@ public class RebuildNacosServiceExecutor {
   /**
    * Rebuild Service Executor .
    *
-   * @param originNamingService origin nacos naming service instance of {@link NamingService}
-   * @param destNamingService dest nacos naming service instance of {@link NamingService}
+   * @param originNamingServices origin nacos naming service instance of {@link NamingService}
+   * @param destNamingServices dest nacos naming service instance of {@link NamingService}
    * @param rebuild rebuild config properties
    */
-  public RebuildNacosServiceExecutor(@NonNull NamingService originNamingService, @NonNull NamingService destNamingService,
+  public RebuildNacosServiceExecutor(@NonNull Map<String, NamingService> originNamingServices, @NonNull Map<String, NamingService> destNamingServices,
                                      @NonNull NacosSyncProperties.Rebuild rebuild) {
-    this.originNamingService = originNamingService;
-    this.destNamingService = destNamingService;
+    this.originNamingServices = originNamingServices;
+    this.destNamingServices = destNamingServices;
     this.rebuild = rebuild;
   }
 
@@ -87,18 +90,12 @@ public class RebuildNacosServiceExecutor {
 
     // set daemon true .
     thread.setDaemon(true);
-
-    // save
-    ServiceThread origin = services.putIfAbsent(thread.getServiceName(), thread);
-
-    if(origin != null) {
-      try{
-        origin.shutdown();
-      } catch (Exception ignore) {}
-    }
-
     // startup
     thread.start();
+
+    if(!services.containsKey(thread.getServiceName())) {
+      services.put(thread.getServiceName(), thread);
+    }
   }
 
   // ~~ destroy method .
@@ -142,12 +139,16 @@ public class RebuildNacosServiceExecutor {
         SyncedServiceRebuildEvent rebuildEvent = (SyncedServiceRebuildEvent) event;
 
         Service service = rebuildEvent.getService();
+        Namespace namespace = rebuildEvent.getNamespace();
+        log.info("[REBUILD] receive event, service: {} | namespace : {}", service.toString(), namespace.key());
+
+        String key = Joiner.on("@@").join(namespace.key(), service.toString());
 
         ServiceThread thread = new ServiceThread() {
 
               @Override
               public String getServiceName() {
-                return service.toString();
+                return key;
               }
 
               private boolean isSyncOwner(Map<String, String> metadata) {
@@ -159,15 +160,23 @@ public class RebuildNacosServiceExecutor {
 
                 while (!isStopped()) {
 
+                  log.info("[REBUILD] execute old service rebuilding tasks ...");
+
                   try {
 
-                    NamingService originNamingService = executor.originNamingService;
-                    NamingService destNamingService = executor.destNamingService;
+                    NamingService originNamingService = executor.originNamingServices.get(namespace.key());
+                    Assert.notNull(originNamingService, "origin namespace's naming service instance must not be null .");
+
+                    NamingService destNamingService = executor.destNamingServices.get(namespace.key());
+                    Assert.notNull(destNamingService, "dest namespace's naming service instance must not be null .");
+
 
                     // loop check origin services .
                     List<Instance> ois = originNamingService.getAllInstances(service.getName(), service.getGroupName());
 
                     List<Instance> dis = destNamingService.getAllInstances(service.getName(), service.getGroupName());
+
+                    log.info("[REBUILD] service-name: {} , service group: {} , O: {} , D: {}", service.getName(), service.getGroupName(), ois.size(), dis.size());
 
                     // warning :: is ois is empty or dis instance size large than dis size .
                     if (ois.isEmpty() || ois.size() < dis.size()) {
@@ -189,8 +198,7 @@ public class RebuildNacosServiceExecutor {
                   } catch (Exception e) {
                     log.warn("[REBUILD] rebuild thread execute failed , service: {}", service.toString());
                   } finally {
-                    ThreadKit.sleep(
-                        executor.rebuild.getCheckInterval(), executor.rebuild.getTimeUnit());
+                    ThreadKit.sleep(executor.rebuild.getCheckInterval(), executor.rebuild.getTimeUnit());
                   }
                 }
               }

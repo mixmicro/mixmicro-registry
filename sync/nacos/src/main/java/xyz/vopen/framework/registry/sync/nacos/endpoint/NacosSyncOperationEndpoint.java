@@ -13,7 +13,7 @@ import org.springframework.http.ResponseEntity;
  * @author <a href="mailto:iskp.me@gmail.com">Elve.Xu</a>
  * @version ${project.version} - 2020/11/14
  */
-@Endpoint(id = "nacos-sync-operation")
+@Endpoint(id = "nacossyncoperation")
 public class NacosSyncOperationEndpoint {
 
   @WriteOperation

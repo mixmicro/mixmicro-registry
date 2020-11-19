@@ -48,6 +48,8 @@ public class NacosSyncProperties implements Serializable, InitializingBean {
 
   @Builder.Default private Rebuild rebuild = new Rebuild();
 
+  @Builder.Default private Fix fix = new Fix();
+
   @Override
   public void afterPropertiesSet() {
     if(syncRule != null) {
@@ -93,6 +95,27 @@ public class NacosSyncProperties implements Serializable, InitializingBean {
   public static class Rebuild implements Serializable {
 
     @Builder.Default private boolean enabled = true;
+
+    @Builder.Default private long checkInterval = 5000;
+
+    @Builder.Default private TimeUnit timeUnit = TimeUnit.MILLISECONDS;
+  }
+
+  @Getter
+  @Setter
+  @Builder
+  @NoArgsConstructor
+  @AllArgsConstructor
+  public static class Fix implements Serializable {
+
+    @Builder.Default private boolean enabled = false;
+
+    /**
+     * Startup Delay
+     *
+     * <p>default: 20 s</p>
+     */
+    @Builder.Default private long delay = 20 * 1000;
 
     @Builder.Default private long checkInterval = 5000;
 

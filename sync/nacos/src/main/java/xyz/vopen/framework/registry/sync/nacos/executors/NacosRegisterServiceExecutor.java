@@ -6,12 +6,15 @@ import com.alibaba.nacos.api.naming.listener.NamingEvent;
 import com.google.common.base.Joiner;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.lang.NonNull;
 import xyz.vopen.framework.registry.sync.nacos.NacosService;
 import xyz.vopen.framework.registry.sync.nacos.ServiceThread;
 import xyz.vopen.framework.registry.sync.nacos.event.SyncedServiceRebuildEvent;
 import xyz.vopen.framework.registry.sync.nacos.model.Instance;
+import xyz.vopen.framework.registry.sync.nacos.model.Namespace;
 import xyz.vopen.framework.registry.sync.nacos.model.Service;
 import xyz.vopen.framework.registry.sync.nacos.model.response.InstanceResponse;
+import xyz.vopen.mixmicro.kits.Assert;
 import xyz.vopen.mixmicro.kits.event.EventBus;
 
 import java.util.*;
@@ -31,13 +34,13 @@ public class NacosRegisterServiceExecutor extends ServiceThread {
 
   private static final Logger log = LoggerFactory.getLogger(NacosRegisterServiceExecutor.class);
 
-  private final NamingService originNamingService;
+  private final Map<String, NamingService> originNamingServices;
 
-  private final NamingService destNamingService;
+  private final Map<String, NamingService> destNamingServices;
 
   private final NacosService nacosService;
 
-  private final String namespaceId;
+  private final Namespace namespace;
 
   private final String authorization;
 
@@ -47,31 +50,31 @@ public class NacosRegisterServiceExecutor extends ServiceThread {
 
   public NacosRegisterServiceExecutor(
       // Nacos Naming Service Instance
-      NamingService originNamingService,
-      NamingService destNamingService,
+      @NonNull Map<String, NamingService> originNamingServices,
+      @NonNull Map<String, NamingService> destNamingServices,
       // Nacos Console Service
       NacosService nacosService,
-      String namespaceId,
+      Namespace namespace,
       String authorization,
       Service service) {
-    this(originNamingService, destNamingService, nacosService, namespaceId, authorization, service, false);
+    this(originNamingServices, destNamingServices, nacosService, namespace, authorization, service, false);
   }
 
   public NacosRegisterServiceExecutor(
       // Nacos Naming Service Instance
-      NamingService originNamingService,
-      NamingService destNamingService,
+      @NonNull Map<String, NamingService> originNamingServices,
+      @NonNull Map<String, NamingService> destNamingServices,
       // Nacos Console Service
       NacosService nacosService,
-      String namespaceId,
+      Namespace namespace,
       String authorization,
       Service service,
       boolean deregister) {
     super();
     this.authorization = authorization;
-    this.namespaceId = namespaceId;
-    this.originNamingService = originNamingService;
-    this.destNamingService = destNamingService;
+    this.namespace = namespace;
+    this.originNamingServices = originNamingServices;
+    this.destNamingServices = destNamingServices;
     this.nacosService = nacosService;
     this.service = service;
     this.deregister = deregister;
@@ -80,9 +83,9 @@ public class NacosRegisterServiceExecutor extends ServiceThread {
   @Override
   public void run() {
 
-    log.info("[EXE] begin process service : {}, {} , {} , {}", namespaceId, service.getClusterCount(), service.getGroupName(), service.getName());
+    log.info("[EXE] begin process service : {}, {} , {} , {}", namespace.getNamespace(), service.getClusterCount(), service.getGroupName(), service.getName());
 
-    InstanceResponse response = nacosService.instances(authorization, service.getName(), service.getClusterName(), service.getGroupName(), namespaceId);
+    InstanceResponse response = nacosService.instances(authorization, service.getName(), service.getClusterName(), service.getGroupName(), namespace.getNamespace());
 
     log.info("[EXE] found service instances , count: {} ", response.getCount());
 
@@ -100,6 +103,14 @@ public class NacosRegisterServiceExecutor extends ServiceThread {
     // subscribe service
 
     try {
+      NamingService originNamingService = originNamingServices.get(namespace.key());
+      log.info("[EXE] found origin namespace: {} NamingService instance : {}", namespace.getNamespaceShowName(), originNamingService);
+      Assert.notNull(originNamingService, "origin namespace's naming service instance must not be null .");
+
+      NamingService destNamingService = destNamingServices.get(namespace.key());
+      log.info("[EXE] found dest namespace: {} NamingService instance : {}", namespace.getNamespaceShowName(), destNamingService);
+      Assert.notNull(destNamingService, "dest namespace's naming service instance must not be null .");
+
       originNamingService.subscribe(
           service.getName(), // service name
           service.getGroupName(), // service group name
@@ -130,7 +141,7 @@ public class NacosRegisterServiceExecutor extends ServiceThread {
                     instanceKeySet.add(composeInstanceKey(temp));
 
                     // post rebuild event .
-                    EventBus.post(SyncedServiceRebuildEvent.builder().service(service).build());
+                    EventBus.post(SyncedServiceRebuildEvent.builder().namespace(namespace).service(service).build());
                   }
                 }
 
@@ -164,6 +175,7 @@ public class NacosRegisterServiceExecutor extends ServiceThread {
 
   private boolean registerInstance(String serviceName, String groupName, com.alibaba.nacos.api.naming.pojo.Instance instance) {
     try {
+      NamingService destNamingService = destNamingServices.get(namespace.key());
       destNamingService.registerInstance(serviceName, groupName, build(instance));
       log.info("[EXE] register service instance , {} | {} | {}", serviceName, groupName, instance.getInstanceId());
 

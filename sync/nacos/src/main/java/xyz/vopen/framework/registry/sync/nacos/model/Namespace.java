@@ -1,8 +1,11 @@
 package xyz.vopen.framework.registry.sync.nacos.model;
 
+import com.google.common.base.Joiner;
 import lombok.*;
 
 import java.io.Serializable;
+
+import static xyz.vopen.framework.registry.sync.nacos.NacosConstants.DEFAULT_NAMESPACE_THREAD_NAME;
 
 /**
  * {@link Namespace}
@@ -28,5 +31,9 @@ public class Namespace implements Serializable {
   private int configCount;
 
   private int type;
+
+  public String key() {
+    return Joiner.on("@@").join(DEFAULT_NAMESPACE_THREAD_NAME, namespace, namespaceShowName);
+  }
 
 }

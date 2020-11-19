@@ -32,4 +32,6 @@ public final class NacosConstants {
   public static final String DEFAULT_FORMAT = "yyyy-MM-dd HH:mm:ss";
 
   public static final ThreadLocal<SimpleDateFormat> DATE_FORMAT = ThreadLocal.withInitial(() -> new SimpleDateFormat(DEFAULT_FORMAT));
+
+  public static final String DEFAULT_NAMESPACE_THREAD_NAME = "NS-THREAD";
 }

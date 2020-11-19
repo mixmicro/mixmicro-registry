@@ -1,6 +1,7 @@
 package xyz.vopen.framework.registry.sync.nacos.event;
 
 import lombok.*;
+import xyz.vopen.framework.registry.sync.nacos.model.Namespace;
 import xyz.vopen.framework.registry.sync.nacos.model.Service;
 import xyz.vopen.mixmicro.kits.event.Event;
 
@@ -20,5 +21,7 @@ import xyz.vopen.mixmicro.kits.event.Event;
 public class SyncedServiceRebuildEvent implements Event {
 
   @NonNull private Service service;
+
+  @NonNull private Namespace namespace;
 
 }
