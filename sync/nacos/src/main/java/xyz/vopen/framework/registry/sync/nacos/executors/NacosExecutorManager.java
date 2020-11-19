@@ -51,8 +51,8 @@ public class NacosExecutorManager {
   public Service putIfAbsent(@NonNull Namespace namespace, @NonNull Service service) {
     Assert.notNull(namespace, "namespace must not be null");
     Assert.notNull(service, "service instance must not be null");
-    String key = Joiner.on("@@").join(namespace.getNamespaceShowName(), service.toString());
-    return running_services.putIfAbsent(key, service);
+    String key = Joiner.on("@@").join(namespace.key(), service.toString());
+    return running_services.put(key, service);
   }
 
   /**
@@ -67,7 +67,7 @@ public class NacosExecutorManager {
   public boolean containsKey(@NonNull Namespace namespace, @NonNull Service service) {
     Assert.notNull(namespace, "namespace must not be null");
     Assert.notNull(service, "service instance must not be null");
-    String key = Joiner.on("@@").join(namespace.getNamespaceShowName(), service.toString());
+    String key = Joiner.on("@@").join(namespace.key(), service.toString());
     return running_services.containsKey(key);
   }
 
@@ -83,7 +83,7 @@ public class NacosExecutorManager {
   public void remove(@NonNull Namespace namespace, @NonNull String serviceName) {
     Assert.notNull(namespace, "namespace must not be null");
     Assert.notNull(serviceName, "service name must not be null");
-    String key = Joiner.on("@@").join(namespace.getNamespaceShowName(), serviceName);
+    String key = Joiner.on("@@").join(namespace.key(), serviceName);
     running_services.remove(key);
   }
 }

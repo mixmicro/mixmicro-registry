@@ -123,14 +123,14 @@ public class NacosRegisterServiceExecutor extends ServiceThread {
 
                 Set<String> instanceKeySet = new HashSet<>();
 
-                log.info("[SUBSCRIBE] received service event , {} | {} | {}",
-                    namingEvent.getServiceName(), service.getGroupName(), namingEvent.getInstances() == null ? 0 : namingEvent.getInstances().size());
-
                 // find all service s instance from origin nacos cluster .
                 // warning ::
                 //    if source cluster nginx is reloaded , need to be shutdown origin -> dest syncer server .
                 //
                 List<com.alibaba.nacos.api.naming.pojo.Instance> sourceInstances = originNamingService.getAllInstances(service.getName(), service.getGroupName());
+
+                log.info("[SUBSCRIBE] received service event , {} | {} | {} | Current Size: {}",
+                    namingEvent.getServiceName(), service.getGroupName(), namingEvent.getInstances() == null ? 0 : namingEvent.getInstances().size(), sourceInstances.size());
 
                 // register instance .
                 for (com.alibaba.nacos.api.naming.pojo.Instance temp : sourceInstances) {

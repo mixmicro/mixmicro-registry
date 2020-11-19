@@ -88,13 +88,13 @@ public class RebuildNacosServiceExecutor {
 
   void rebuild(@NonNull ServiceThread thread) {
 
-    // set daemon true .
-    thread.setDaemon(true);
-    // startup
-    thread.start();
-
     if(!services.containsKey(thread.getServiceName())) {
       services.put(thread.getServiceName(), thread);
+
+      // set daemon true .
+      thread.setDaemon(true);
+      // startup
+      thread.start();
     }
   }
 
@@ -179,7 +179,7 @@ public class RebuildNacosServiceExecutor {
                     log.info("[REBUILD] service-name: {} , service group: {} , O: {} , D: {}", service.getName(), service.getGroupName(), ois.size(), dis.size());
 
                     // warning :: is ois is empty or dis instance size large than dis size .
-                    if (ois.isEmpty() || ois.size() < dis.size()) {
+                    if (ois.isEmpty() && dis.size() > 0) {
 
                       dis.forEach(instance -> {
                         // check this
@@ -193,6 +193,11 @@ public class RebuildNacosServiceExecutor {
                           }
                         }
                       });
+                    }
+
+                    // if dest nacos available service instance size equals zero , just deregister all origin instance .
+                    if(dis.isEmpty()) {
+
                     }
 
                   } catch (Exception e) {

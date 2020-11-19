@@ -45,8 +45,6 @@ public class NacosSyncService {
 
   private RebuildNacosServiceExecutor rebuildExecutor;
 
-  private final Map<String, ServiceThread> nsmap = Maps.newConcurrentMap();
-
   private final AtomicReference<String> authorizationRef = new AtomicReference<>();
 
   // ~~ namespaced naming service cache
@@ -171,7 +169,7 @@ public class NacosSyncService {
                 NacosExecutorManager.manager().putIfAbsent(namespace, service);
 
                 // build service executor
-                NacosRegisterServiceExecutor executor = new NacosRegisterServiceExecutor(onssc, dnssc, nacosService, namespace, authorization, service);
+                NacosRegisterServiceExecutor executor = new NacosRegisterServiceExecutor(onssc, dnssc, nacosService, namespace, authorization, service, properties.isDeregister());
                 log.info("[SSE] execute service sync , service name :{}", service.getName());
                 // execute directly
                 executor.run();
@@ -182,14 +180,7 @@ public class NacosSyncService {
       };
 
       // Start
-      namespaceServiceThread.start();
-
-      // ADD
-      ServiceThread ot = nsmap.putIfAbsent(namespaceServiceThread.getServiceName(), namespaceServiceThread);
-
-      if(ot != null) {
-        ot.shutdown();
-      }
+      namespaceServiceThread.run();
     }
   }
 
@@ -249,15 +240,6 @@ public class NacosSyncService {
       if(properties.getFix().isEnabled() && fixServiceThread != null) {
         fixServiceThread.shutdown();
       }
-
-      nsmap.forEach(
-          (name, serviceThread) -> {
-            try {
-              serviceThread.shutdown();
-            } catch (Exception e) {
-              log.warn("[SS] task: {} ,shutdown interrupted .", name);
-            }
-          });
     }
 
 
