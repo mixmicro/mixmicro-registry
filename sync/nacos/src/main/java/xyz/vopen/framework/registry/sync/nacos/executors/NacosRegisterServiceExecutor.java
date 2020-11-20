@@ -9,6 +9,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.lang.NonNull;
 import xyz.vopen.framework.registry.sync.nacos.NacosService;
 import xyz.vopen.framework.registry.sync.nacos.ServiceThread;
+import xyz.vopen.framework.registry.sync.nacos.config.DynamicConfigService;
 import xyz.vopen.framework.registry.sync.nacos.event.SyncedServiceRebuildEvent;
 import xyz.vopen.framework.registry.sync.nacos.model.Instance;
 import xyz.vopen.framework.registry.sync.nacos.model.Namespace;
@@ -48,7 +49,10 @@ public class NacosRegisterServiceExecutor extends ServiceThread {
 
   private final boolean deregister;
 
+  final DynamicConfigService dynamicConfigService;
+
   public NacosRegisterServiceExecutor(
+      DynamicConfigService dynamicConfigService,
       // Nacos Naming Service Instance
       @NonNull Map<String, NamingService> originNamingServices,
       @NonNull Map<String, NamingService> destNamingServices,
@@ -57,10 +61,11 @@ public class NacosRegisterServiceExecutor extends ServiceThread {
       Namespace namespace,
       String authorization,
       Service service) {
-    this(originNamingServices, destNamingServices, nacosService, namespace, authorization, service, false);
+    this(dynamicConfigService, originNamingServices, destNamingServices, nacosService, namespace, authorization, service, false);
   }
 
   public NacosRegisterServiceExecutor(
+      DynamicConfigService dynamicConfigService,
       // Nacos Naming Service Instance
       @NonNull Map<String, NamingService> originNamingServices,
       @NonNull Map<String, NamingService> destNamingServices,
@@ -71,6 +76,7 @@ public class NacosRegisterServiceExecutor extends ServiceThread {
       Service service,
       boolean deregister) {
     super();
+    this.dynamicConfigService = dynamicConfigService;
     this.authorization = authorization;
     this.namespace = namespace;
     this.originNamingServices = originNamingServices;
@@ -140,8 +146,9 @@ public class NacosRegisterServiceExecutor extends ServiceThread {
                     registerInstance(service.getName(), service.getGroupName(), build(temp));
                     instanceKeySet.add(composeInstanceKey(temp));
 
-                    // post rebuild event .
+                    // check application is migrated x?x -> post rebuild event .
                     EventBus.post(SyncedServiceRebuildEvent.builder().namespace(namespace).service(service).build());
+
                   }
                 }
 

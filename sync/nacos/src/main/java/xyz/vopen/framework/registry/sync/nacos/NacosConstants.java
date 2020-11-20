@@ -34,4 +34,12 @@ public final class NacosConstants {
   public static final ThreadLocal<SimpleDateFormat> DATE_FORMAT = ThreadLocal.withInitial(() -> new SimpleDateFormat(DEFAULT_FORMAT));
 
   public static final String DEFAULT_NAMESPACE_THREAD_NAME = "NS-THREAD";
+
+  public static final String DEFAULT_CONFIG_NAMESPACE = "public";
+
+  public static final String DEFAULT_CONFIG_NAMESPACE_ID = "";
+
+  public static final String DEFAULT_GROUP = "DEFAULT_GROUP";
+
+  public static final String CORE_CONFIG_PREFIX = "mixmicro.registry.sync";
 }

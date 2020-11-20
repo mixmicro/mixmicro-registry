@@ -10,6 +10,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.lang.NonNull;
 import xyz.vopen.framework.registry.sync.nacos.NacosSyncProperties;
 import xyz.vopen.framework.registry.sync.nacos.ServiceThread;
+import xyz.vopen.framework.registry.sync.nacos.config.DynamicConfigService;
 import xyz.vopen.framework.registry.sync.nacos.event.SyncedServiceRebuildEvent;
 import xyz.vopen.framework.registry.sync.nacos.model.Namespace;
 import xyz.vopen.framework.registry.sync.nacos.model.Service;
@@ -42,6 +43,8 @@ public class RebuildNacosServiceExecutor {
 
   final Map<String, NamingService> destNamingServices;
 
+  final DynamicConfigService dynamicConfigService;
+
   final NacosSyncProperties.Rebuild rebuild;
 
   private final AtomicBoolean initialized = new AtomicBoolean(false);
@@ -53,12 +56,14 @@ public class RebuildNacosServiceExecutor {
   /**
    * Rebuild Service Executor .
    *
+   * @param dynamicConfigService dynamic config service instance of {@link DynamicConfigService}
    * @param originNamingServices origin nacos naming service instance of {@link NamingService}
    * @param destNamingServices dest nacos naming service instance of {@link NamingService}
    * @param rebuild rebuild config properties
    */
-  public RebuildNacosServiceExecutor(@NonNull Map<String, NamingService> originNamingServices, @NonNull Map<String, NamingService> destNamingServices,
+  public RebuildNacosServiceExecutor(DynamicConfigService dynamicConfigService, @NonNull Map<String, NamingService> originNamingServices, @NonNull Map<String, NamingService> destNamingServices,
                                      @NonNull NacosSyncProperties.Rebuild rebuild) {
+    this.dynamicConfigService = dynamicConfigService;
     this.originNamingServices = originNamingServices;
     this.destNamingServices = destNamingServices;
     this.rebuild = rebuild;
@@ -160,6 +165,11 @@ public class RebuildNacosServiceExecutor {
 
                 while (!isStopped()) {
 
+                  if(!executor.dynamicConfigService.getConfig().isMigrated()) {
+                    ThreadKit.sleep(executor.rebuild.getCheckInterval(), executor.rebuild.getTimeUnit());
+                    continue;
+                  }
+
                   log.info("[REBUILD] execute old service rebuilding tasks ...");
 
                   try {
@@ -178,12 +188,23 @@ public class RebuildNacosServiceExecutor {
 
                     log.info("[REBUILD] service-name: {} , service group: {} , O: {} , D: {}", service.getName(), service.getGroupName(), ois.size(), dis.size());
 
-                    // warning :: is ois is empty or dis instance size large than dis size .
-                    if (ois.isEmpty() && dis.size() > 0) {
+                    // if origin nacos instance size not equals dest nacos instance size .
+                    if(ois.size() != dis.size()) {
 
-                      dis.forEach(instance -> {
-                        // check this
-                        if(isSyncOwner(instance.getMetadata())) {
+                      if(ois.size() > 0) {
+                        ois.forEach(instance -> {
+                          if(!isSyncOwner(instance.getMetadata())) {
+                            try {
+                              originNamingService.deregisterInstance(service.getName(), service.getGroupName(), instance);
+                            } catch (NacosException e) {
+                              log.warn("[REBUILD] rebuild thread un-register service instance failed , service: {}, instance : {}", service.toString(), instance.getServiceName());
+                            }
+                          }
+                        });
+                      }
+
+                      if(dis.size() > 0) {
+                        dis.forEach(instance -> {
                           // reset sync owner key .
                           instance.getMetadata().put(METADATA_SYNC_OWNER_KEY, METADATA_SYNC_REBUILD_VALUE);
                           try {
@@ -191,13 +212,8 @@ public class RebuildNacosServiceExecutor {
                           } catch (NacosException e) {
                             log.warn("[REBUILD] rebuild thread register service instance failed , service: {}, instance : {}", service.toString(), instance.getServiceName());
                           }
-                        }
-                      });
-                    }
-
-                    // if dest nacos available service instance size equals zero , just deregister all origin instance .
-                    if(dis.isEmpty()) {
-
+                        });
+                      }
                     }
 
                   } catch (Exception e) {

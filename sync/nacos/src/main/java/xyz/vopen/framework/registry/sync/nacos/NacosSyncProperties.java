@@ -13,6 +13,7 @@ import java.util.Objects;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
 
+import static xyz.vopen.framework.registry.sync.nacos.NacosConstants.*;
 import static xyz.vopen.framework.registry.sync.nacos.NacosSyncProperties.PREFIX;
 
 /**
@@ -50,6 +51,8 @@ public class NacosSyncProperties implements Serializable, InitializingBean {
 
   @Builder.Default private Fix fix = new Fix();
 
+  @Builder.Default private CoreConfig core = new CoreConfig();
+
   @Override
   public void afterPropertiesSet() {
     if(syncRule != null) {
@@ -58,6 +61,26 @@ public class NacosSyncProperties implements Serializable, InitializingBean {
   }
 
   // ~~ inner class
+
+  @Getter
+  @Setter
+  @Builder
+  @NoArgsConstructor
+  @AllArgsConstructor
+  public static class CoreConfig implements Serializable {
+
+    private String configServerAddr;
+
+    @Builder.Default private String namespaceId = DEFAULT_CONFIG_NAMESPACE_ID;
+
+    @Builder.Default private String dataId = "mixmicro-registry.properties";
+
+    @Builder.Default private String group = DEFAULT_GROUP;
+
+    @Builder.Default private long timeout = 5000;
+
+  }
+
 
   @Getter
   @Setter

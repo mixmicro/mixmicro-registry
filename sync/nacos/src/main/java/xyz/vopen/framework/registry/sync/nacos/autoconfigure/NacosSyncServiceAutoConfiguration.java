@@ -3,6 +3,7 @@ package xyz.vopen.framework.registry.sync.nacos.autoconfigure;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.boot.context.event.ApplicationReadyEvent;
+import org.springframework.boot.context.event.ApplicationStartedEvent;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.ApplicationEvent;
 import org.springframework.context.ApplicationListener;
@@ -13,6 +14,7 @@ import org.springframework.lang.NonNull;
 import xyz.vopen.framework.registry.sync.nacos.NacosService;
 import xyz.vopen.framework.registry.sync.nacos.NacosSyncProperties;
 import xyz.vopen.framework.registry.sync.nacos.NacosSyncService;
+import xyz.vopen.framework.registry.sync.nacos.config.DynamicConfigService;
 import xyz.vopen.mixmicro.components.boot.httpclient.MixHttpClientScan;
 
 /**
@@ -32,13 +34,18 @@ public class NacosSyncServiceAutoConfiguration {
 
   private final static Logger log = LoggerFactory.getLogger(NacosSyncServiceAutoConfiguration.class);
 
+  @Bean
+  public DynamicConfigService dynamicConfigService(NacosSyncProperties properties) {
+    return new DynamicConfigService(properties.getCore());
+  }
+
   @Primary
   @Bean(destroyMethod = "destroy")
-  public NacosSyncService nacosSyncService(NacosSyncProperties properties, NacosService nacosService) {
+  public NacosSyncService nacosSyncService(NacosSyncProperties properties, NacosService nacosService, DynamicConfigService dynamicConfigService) {
 
     log.info("[SYNC] nacos sync service auto-configuring ...");
 
-    return new NacosSyncService(properties, nacosService);
+    return new NacosSyncService(properties, nacosService, dynamicConfigService);
   }
 
   // ~~ application event listener bean defined .
@@ -61,6 +68,19 @@ public class NacosSyncServiceAutoConfiguration {
     @Override
     public void onApplicationEvent(@NonNull ApplicationEvent event) {
 
+      // on started event
+      if(event instanceof ApplicationStartedEvent) {
+
+        ApplicationStartedEvent startedEvent = (ApplicationStartedEvent) event;
+
+        DynamicConfigService service = startedEvent.getApplicationContext().getBean(DynamicConfigService.class);
+
+        log.info("[DYNAMIC-CONFIG] startup dynamic service ...");
+
+        service.startup();
+      }
+
+      // on ready event
       if(event instanceof ApplicationReadyEvent) {
 
         ApplicationReadyEvent readyEvent = (ApplicationReadyEvent) event;
@@ -70,7 +90,6 @@ public class NacosSyncServiceAutoConfiguration {
         log.info("[SYNC] startup sync service ...");
 
         service.startup();
-
       }
     }
   }

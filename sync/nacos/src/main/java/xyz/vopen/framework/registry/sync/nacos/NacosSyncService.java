@@ -7,6 +7,7 @@ import com.google.common.base.Joiner;
 import com.google.common.collect.Maps;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import xyz.vopen.framework.registry.sync.nacos.config.DynamicConfigService;
 import xyz.vopen.framework.registry.sync.nacos.executors.NacosExecutorManager;
 import xyz.vopen.framework.registry.sync.nacos.executors.NacosRegisterServiceExecutor;
 import xyz.vopen.framework.registry.sync.nacos.executors.RebuildNacosServiceExecutor;
@@ -41,6 +42,8 @@ public class NacosSyncService {
 
   private final NacosSyncProperties properties;
 
+  private final DynamicConfigService dynamicConfigService;
+
   private final NacosService nacosService;
 
   private RebuildNacosServiceExecutor rebuildExecutor;
@@ -53,9 +56,10 @@ public class NacosSyncService {
 
   private ServiceThread fixServiceThread;
 
-  public NacosSyncService(NacosSyncProperties properties, NacosService nacosService) {
+  public NacosSyncService(NacosSyncProperties properties, NacosService nacosService, DynamicConfigService dynamicConfigService) {
     this.properties = properties;
     this.nacosService = nacosService;
+    this.dynamicConfigService = dynamicConfigService;
   }
 
   // ~~ startup method .
@@ -70,7 +74,7 @@ public class NacosSyncService {
       // check rebuild service .
       if(properties.getRebuild().isEnabled()) {
         if(rebuildExecutor == null) {
-          rebuildExecutor = new RebuildNacosServiceExecutor(onssc, dnssc, properties.getRebuild());
+          rebuildExecutor = new RebuildNacosServiceExecutor(dynamicConfigService, onssc, dnssc, properties.getRebuild());
           rebuildExecutor.initialize();
         }
       }
@@ -169,7 +173,9 @@ public class NacosSyncService {
                 NacosExecutorManager.manager().putIfAbsent(namespace, service);
 
                 // build service executor
-                NacosRegisterServiceExecutor executor = new NacosRegisterServiceExecutor(onssc, dnssc, nacosService, namespace, authorization, service, properties.isDeregister());
+                NacosRegisterServiceExecutor executor = new NacosRegisterServiceExecutor(dynamicConfigService, onssc, dnssc,
+                    nacosService, namespace, authorization, service, properties.isDeregister());
+
                 log.info("[SSE] execute service sync , service name :{}", service.getName());
                 // execute directly
                 executor.run();
