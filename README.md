@@ -4,8 +4,8 @@ Mixmicro Service Registry Component
 
 ## Function
 
- - Console: provide API and console for management
- - Worker: provider the service registration synchronization. 
+ - [x] Nacos Migration: Nacos cluster upgrade, migration, smooth application transition.
+ - [ ] Mixmicro Registry: Naming Service. 
 
 ## Architecture
 
@@ -13,36 +13,44 @@ Mixmicro Service Registry Component
 
 
 ```
-            +-------------+
-     +----> |NacosClusterA|
-     |      +-------------+               +-------------+
-     |                                    |NacosClusterB|
-Pull |                                    +--+----------+
-Info |      +------------+                   ^
-     |      |ZooKeeper   |                   |
-     |      +--+---------+                   | Push Info
-     |         ^ Pull Info                   |
-     |         |                             |
-     |        ++-----------------------------+--+
-     <--------+  NacosSync1, NacosSync2,....    |
-              +---+-------------------------+---+
-                  |                         |
-                  |                         |
-                  |                         |
-                  |       +---------+       |
-                  +-----> |NacosSync| <-----+
-                          |Storage |
-                          +---------+
+                Cluster Version Upgrade & Migration
+
+    +----------------+   +----------------+  +----------------+
+    |Application Pod |   |Application Pod |  |Application Pod |
+    +----------------+   +----------------+  +----------------+             
+            |                     |                 |
+            |                     |                 |
+            +-----------+---------+-----------------+
+                        |
+                        | Service Registry & Discovery
+                        |
+                        \/
+                +----------------+
+                |Nginx Loadblance| ----------------+
+                +----------------+                 |
+                       |                           |
+                       |  Switching Nginx Traffic  |
+                       |     ---------->>>         |
+                       |                           |
++----------------------|---------------------------|--------------------+
+|                      \/                          \/                   |
+|                +-------------+               +-------------+          |
+|         +----> |NacosClusterA| < V1.1.x      |NacosClusterB| V1.3.x+  |
+|         |      +-------------+               +-------------+          |
+|         |         |                             ^       |             |
+| Rebuild |         | Listener                    |       |             |
+|         |         |    +-------------+          | Push  | Listener    |
+|         |         |    | NacosConfig |          |       |             |
+|         |         |    +--+----------+          |       |             |
+|         |         |       ^ Pull Info           |       |             |
+|         |         \/      |                     |       \/            |
+|         |        +------------------------------+--------+            |
+|         <--------+   NacosSync1, NacosSync2,  ....       |            |
+|                  +---+-------------------------+---------+            |
+|                                                                       |
++-----------------------------------------------------------------------+
+
 ```
-
-### Architecture HighLights
-
- - All registration information will be stored in NacosSync DB.
- - Multiple NacosSync instances will perform the same job.
-     - Multiple NacosSync instances ensure high availability.
-     - Multiple NacosSync instances performing the same job ensure the simplicity.
-     - NacosCluster target will dedup the synchronization information from Nacos.
-     
 
 ### Requirements
 
