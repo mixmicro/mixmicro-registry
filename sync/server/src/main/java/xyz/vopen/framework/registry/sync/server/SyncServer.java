@@ -3,8 +3,9 @@ package xyz.vopen.framework.registry.sync.server;
 import io.undertow.UndertowOptions;
 import io.undertow.server.DefaultByteBufferPool;
 import io.undertow.websockets.jsr.WebSocketDeploymentInfo;
-import org.springframework.boot.SpringApplication;
+import org.springframework.boot.WebApplicationType;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.boot.builder.SpringApplicationBuilder;
 import org.springframework.boot.web.embedded.undertow.UndertowServletWebServerFactory;
 import org.springframework.boot.web.server.WebServerFactoryCustomizer;
 import org.springframework.context.annotation.Bean;
@@ -24,7 +25,12 @@ import static io.undertow.websockets.jsr.WebSocketDeploymentInfo.ATTRIBUTE_NAME;
 public class SyncServer {
 
   public static void main(String[] args) {
-    SpringApplication.run(SyncServer.class, args);
+    new SpringApplicationBuilder()
+        .sources(SyncServer.class)
+        // default properties
+        .properties("--spring.profiles.active=prod")
+        .web(WebApplicationType.SERVLET)
+        .run(args);
   }
 
   @Bean
