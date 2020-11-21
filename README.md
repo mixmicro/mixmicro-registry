@@ -67,6 +67,9 @@ YunLSP+ Maven Repository Configuration
 
 ### Quick Start
 
+
+#### Run With `binary package` .
+
 You can download binaries from [Release Repo](http://git.hgj.net/elve.xu/Mixmicro-Registry) or [repo.hgj.net](http://nexus.hgj.net/).
 
 *First* : unzip release package
@@ -87,8 +90,86 @@ $ sh ./bin/startup.sh -p production
 $ tail -f logs/start.log
 ```
 
+#### Run With `docker image` .
+
+*First* : build docker image 
+
+```bash
+$ cd mixmicro-registry/sync/server
+$ mvn docker:build
+```
+
+*Second* : startup docker image
+
+```bash
+docker run -p 2663:2663 \ 
+    --rm -e SERVER_ENV="docker" \ 
+    -v /tmp/logs:/tmp/logs \
+    -v /tmp/logs/mixmicro-registry-sync-server:/mixmicro-registry-sync-server/logs \ 
+    --name mixmicro-registry-sync-server \
+    mixmicro-registry-sync-server:1.0.0.BUILD-SNAPSHOT
+```
+
+*Third* : check docker running containers
+
+```bash
+
+$ docker ps
+
+> output
+
+CONTAINER ID        IMAGE                                                COMMAND                  CREATED             STATUS              PORTS                                                   NAMES
+3205a5f72cff        mixmicro-registry-sync-server:1.0.0.BUILD-SNAPSHOT   "/bin/sh -c bin/star…"   25 minutes ago      Up 25 minutes       0.0.0.0:2663->2663/tcp                                  mixmicro-registry-sync-server
+
+```
+
+
 > param: -p (optional): `production` | `dev`
 
+### Configuration Properties
+
+```properties
+
+## Nacos Sync Config
+
+### Origin Nacos Cluster Properties
+# origin nacos server console address ,supported 
+mixmicro.registry.sync.nacos.origin.console-addr=http://xxx.xxx.xxx.xxx:18848/
+# origin nacos server address (for application node) ,supported  
+mixmicro.registry.sync.nacos.origin.server-addr=xxx.xxx.xxx.xxx:18848
+# origin nacos server auth username
+mixmicro.registry.sync.nacos.origin.username=nacos
+# origin nacos server auth password
+mixmicro.registry.sync.nacos.origin.password=nacos
+
+### Dest Nacos Cluster Properties
+# dest nacos server console address ,supported 
+mixmicro.registry.sync.nacos.destination.console-addr=http://xxx.xxx.xxx.xxx:28848/
+# dest nacos server address (for application node) ,supported
+mixmicro.registry.sync.nacos.destination.server-addr=xxx.xxx.xxx.xxx:28848
+# dest nacos server auth username
+mixmicro.registry.sync.nacos.destination.username=nacos
+# dest nacos server auth password
+mixmicro.registry.sync.nacos.destination.password=nacos
+
+### Sync Rule
+# namespace rule , eg: namespace1;namespace2;....
+mixmicro.registry.sync.nacos.sync-rule.namespace-regular=*
+# namespace rule , eg: service-name-1;service-name-2;....
+mixmicro.registry.sync.nacos.sync-rule.service-regular=*
+
+### When there are new namespaces, service points changes in the main cluster, they are automatically recognized and added to the execution plan.
+# default value is true
+mixmicro.registry.sync.nacos.fix.enabled=true
+
+### If or not to enable anti-registration from cluster service, default value: false
+### Recommended opening
+mixmicro.registry.sync.nacos.deregister=true
+
+### Core Config
+mixmicro.registry.sync.nacos.core.config-server-addr=xxx.xxx.xxx.xxx:8848
+
+```
 
 ### Building from Source
 

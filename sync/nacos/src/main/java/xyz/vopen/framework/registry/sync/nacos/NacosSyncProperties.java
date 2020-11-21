@@ -162,6 +162,20 @@ public class NacosSyncProperties implements Serializable, InitializingBean {
      * <p>
      */
     private String consoleAddr;
+
+    /**
+     * Nacos Destination Console Auth Username
+     *
+     * <p>
+     */
+    private String username;
+
+    /**
+     * Nacos Destination Console Auth Password
+     *
+     * <p>
+     */
+    private String password;
   }
 
   @Getter
