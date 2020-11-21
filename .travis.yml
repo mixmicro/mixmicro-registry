@@ -1,0 +1,12 @@
+notifications:
+  email:
+    recipients:
+      - elve.xu@yunlsp.com
+
+language: java
+jdk:
+  - openjdk11
+  - openjdk8
+
+script:
+  - clean package -Dmaven.test.skip=true -Dmaven.javadoc.skip=true -Phgj
