@@ -98,8 +98,6 @@ public class NacosSyncService {
       log.warn("[SS] sync service is started .");
     }
   }
-
-
   private void startup0() {
 
     String authorization = authorizationRef.get();

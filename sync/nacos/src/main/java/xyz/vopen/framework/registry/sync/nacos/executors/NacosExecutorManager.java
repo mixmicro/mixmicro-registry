@@ -2,12 +2,14 @@ package xyz.vopen.framework.registry.sync.nacos.executors;
 
 import com.google.common.base.Joiner;
 import com.google.common.collect.Maps;
+import com.google.common.collect.Sets;
 import org.springframework.lang.NonNull;
 import xyz.vopen.framework.registry.sync.nacos.model.Namespace;
 import xyz.vopen.framework.registry.sync.nacos.model.Service;
 import xyz.vopen.mixmicro.kits.Assert;
 
 import java.util.Map;
+import java.util.Set;
 
 /**
  * {@link NacosExecutorManager}
@@ -36,7 +38,9 @@ public class NacosExecutorManager {
 
   // ~~ Context Properties
 
-  private final Map<String, Service> running_services = Maps.newConcurrentMap();
+  private static volatile Map<String, Service> running_services = Maps.newConcurrentMap();
+
+  static volatile Set<String> fixRebuildInstances = Sets.newHashSet();
 
   /**
    * Save Running Service Instance

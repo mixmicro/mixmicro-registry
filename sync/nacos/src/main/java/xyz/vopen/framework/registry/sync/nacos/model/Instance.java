@@ -1,5 +1,6 @@
 package xyz.vopen.framework.registry.sync.nacos.model;
 
+import com.google.common.base.Joiner;
 import lombok.*;
 
 import java.io.Serializable;
@@ -41,19 +42,29 @@ public class Instance implements Serializable {
 
   private Map<String, String> metadata;
 
+  public String key() {
+    return Joiner.on("@@").join(clusterName, serviceName, instanceId, ip, port);
+  }
+
+  public static com.alibaba.nacos.api.naming.pojo.Instance build(Instance instance) {
+    return build(instance, true);
+  }
+
   /**
    * Build Nacos Instance
    *
    * @param instance temp service instance
    * @return instance of {@link com.alibaba.nacos.api.naming.pojo.Instance}
    */
-  public static com.alibaba.nacos.api.naming.pojo.Instance build(Instance instance) {
+  public static com.alibaba.nacos.api.naming.pojo.Instance build(Instance instance, boolean isSyncerOwner) {
     com.alibaba.nacos.api.naming.pojo.Instance temp = new com.alibaba.nacos.api.naming.pojo.Instance();
 
     Map<String, String> metadata = instance.getMetadata();
-    // Add extensional metadata .
-    metadata.put(METADATA_SYNC_OWNER_KEY, METADATA_SYNC_OWNER_VALUE);
-    metadata.put(METADATA_SYNC_TIMESTAMP_KEY, DATE_FORMAT.get().format(new Date()));
+    if(isSyncerOwner) {
+      // Add extensional metadata .
+      metadata.put(METADATA_SYNC_OWNER_KEY, METADATA_SYNC_OWNER_VALUE);
+      metadata.put(METADATA_SYNC_TIMESTAMP_KEY, DATE_FORMAT.get().format(new Date()));
+    }
 
     temp.setMetadata(metadata);
     temp.setWeight(instance.getWeight());

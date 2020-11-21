@@ -21,6 +21,7 @@ import xyz.vopen.mixmicro.kits.event.EventBus;
 import java.util.*;
 
 import static xyz.vopen.framework.registry.sync.nacos.NacosConstants.*;
+import static xyz.vopen.framework.registry.sync.nacos.executors.NacosExecutorManager.fixRebuildInstances;
 import static xyz.vopen.framework.registry.sync.nacos.model.Instance.build;
 
 /**
@@ -100,10 +101,19 @@ public class NacosRegisterServiceExecutor extends ServiceThread {
     // register instance into target nacos cluster
     for (Instance instance : instances) {
 
+      String key = instance.key();
+      if(fixRebuildInstances.add(key)) {
+        // check origin service instance s owner is rebuild .?
+        Map<String, String> metadata = instance.getMetadata();
+        if(isRebuildOwner(metadata)) {
+          log.info("[EXE-FIX] try to fix origin instance metadata , instance: {}", instance.getServiceName());
+          boolean result = this.fixRegisterInstance(service.getName(), service.getGroupName(), instance);
+          log.info("[EXE-FIX] service instance :{} ,register result : {}", instance.getServiceName(), result);
+        }
+      }
+
       boolean registered = registerInstance(service.getName(), service.getGroupName(), instance);
-
       log.info("[EXE] service instance :{} ,register result : {}", instance.getServiceName(), registered);
-
     }
 
     // subscribe service
@@ -124,47 +134,57 @@ public class NacosRegisterServiceExecutor extends ServiceThread {
             if (event instanceof NamingEvent) {
 
               try{
+                // if app flow is migrated , stop listener origin service .
+                if(!dynamicConfigService.getConfig().isMigrated()) {
 
-                NamingEvent namingEvent = (NamingEvent) event;
+                  NamingEvent namingEvent = (NamingEvent) event;
 
-                Set<String> instanceKeySet = new HashSet<>();
+                  Set<String> instanceKeySet = new HashSet<>();
 
-                // find all service s instance from origin nacos cluster .
-                // warning ::
-                //    if source cluster nginx is reloaded , need to be shutdown origin -> dest syncer server .
-                //
-                List<com.alibaba.nacos.api.naming.pojo.Instance> sourceInstances = originNamingService.getAllInstances(service.getName(), service.getGroupName());
+                  // find all service s instance from origin nacos cluster .
+                  // warning ::
+                  //    if source cluster nginx is reloaded , need to be shutdown origin -> dest syncer server .
+                  //
+                  List<com.alibaba.nacos.api.naming.pojo.Instance> sourceInstances = originNamingService.getAllInstances(service.getName(), service.getGroupName());
 
-                log.info("[SUBSCRIBE] received service event , {} | {} | {} | Current Size: {}",
-                    namingEvent.getServiceName(), service.getGroupName(), namingEvent.getInstances() == null ? 0 : namingEvent.getInstances().size(), sourceInstances.size());
+                  log.info("[SUBSCRIBE] received service event , {} | {} | {} | Current Size: {}",
+                      namingEvent.getServiceName(), service.getGroupName(), namingEvent.getInstances() == null ? 0 : namingEvent.getInstances().size(), sourceInstances.size());
 
-                // register instance .
-                for (com.alibaba.nacos.api.naming.pojo.Instance temp : sourceInstances) {
+                  // register instance .
+                  for (com.alibaba.nacos.api.naming.pojo.Instance temp : sourceInstances) {
 
-                  // check instance is from rebuild execute.?
-                  if(!isRebuildOwner(temp.getMetadata())) {
-                    registerInstance(service.getName(), service.getGroupName(), build(temp));
-                    instanceKeySet.add(composeInstanceKey(temp));
+                    // check instance is from rebuild execute.?
+                    // warning :: If you switch back to the original cluster after switching Nginx traffic,
+                    //            it is recommended that you restart the synchronization cluster. (Reason: When the original cluster has new service nodes up and down,
+                    //            it may cause data inconsistencies between the master and slave clusters.)
+                    // todo fixed :: need fixed origin nacos cluster service instance's metadata .(removed key: mixmicro.registry.sync.owner) .
+                    if(!isRebuildOwner(temp.getMetadata())) {
+                      registerInstance(service.getName(), service.getGroupName(), build(temp));
+                      instanceKeySet.add(composeInstanceKey(temp));
 
-                    // check application is migrated x?x -> post rebuild event .
-                    EventBus.post(SyncedServiceRebuildEvent.builder().namespace(namespace).service(service).build());
+                      // check application is migrated x?x -> post rebuild event .
+                      EventBus.post(SyncedServiceRebuildEvent.builder().namespace(namespace).service(service).build());
 
-                  }
-                }
-
-                // unregister instance .
-
-                if(deregister) { // check is deregister enabled ?
-                  List<com.alibaba.nacos.api.naming.pojo.Instance> destInstances = destNamingService.getAllInstances(service.getName(), service.getGroupName());
-
-                  for (com.alibaba.nacos.api.naming.pojo.Instance temp : destInstances) {
-                    if(isSyncOwner(temp.getMetadata()) && !instanceKeySet.contains(composeInstanceKey(temp))) {
-                      destNamingService.deregisterInstance(service.getName(), temp.getIp(), temp.getPort());
                     }
                   }
-                }
 
-                instanceKeySet.clear();
+                  // unregister instance .
+
+                  if(deregister) { // check is deregister enabled ?
+                    List<com.alibaba.nacos.api.naming.pojo.Instance> destInstances = destNamingService.getAllInstances(service.getName(), service.getGroupName());
+
+                    for (com.alibaba.nacos.api.naming.pojo.Instance temp : destInstances) {
+                      if(isSyncOwner(temp.getMetadata()) && !instanceKeySet.contains(composeInstanceKey(temp))) {
+                        destNamingService.deregisterInstance(service.getName(), temp.getIp(), temp.getPort());
+                      }
+                    }
+                  }
+
+                  instanceKeySet.clear();
+
+                } else {
+                  log.warn("[EXE] Nginx service traffic has been switched to suspend listening callbacks on the source nacos service list.");
+                }
 
               } catch (NacosException e) {
                 log.warn("[EXE] event process failed , code: {} ,err: {}", e.getErrCode(), e.getErrMsg());
@@ -188,6 +208,24 @@ public class NacosRegisterServiceExecutor extends ServiceThread {
 
     } catch (NacosException e) {
       log.warn("[EXE] register service failed , code: {} ,err: {}", e.getErrCode(), e.getErrMsg());
+      return false;
+    }
+    return true;
+  }
+
+  private boolean fixRegisterInstance(String serviceName, String groupName, Instance instance) {
+    return this.fixRegisterInstance(serviceName, groupName, build(instance, false));
+  }
+
+  private boolean fixRegisterInstance(String serviceName, String groupName, com.alibaba.nacos.api.naming.pojo.Instance instance) {
+    try {
+      NamingService originNamingService = originNamingServices.get(namespace.key());
+      instance.getMetadata().remove(METADATA_SYNC_OWNER_KEY, METADATA_SYNC_REBUILD_VALUE);
+      originNamingService.registerInstance(serviceName, groupName, instance);
+      log.info("[EXE] fix origin service instance , {} | {} | {}", serviceName, groupName, instance.getInstanceId());
+
+    } catch (NacosException e) {
+      log.warn("[EXE] fix origin service failed , code: {} ,err: {}", e.getErrCode(), e.getErrMsg());
       return false;
     }
     return true;

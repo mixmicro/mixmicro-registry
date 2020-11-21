@@ -13,7 +13,8 @@ import java.util.Objects;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
 
-import static xyz.vopen.framework.registry.sync.nacos.NacosConstants.*;
+import static xyz.vopen.framework.registry.sync.nacos.NacosConstants.DEFAULT_CONFIG_NAMESPACE_ID;
+import static xyz.vopen.framework.registry.sync.nacos.NacosConstants.DEFAULT_GROUP;
 import static xyz.vopen.framework.registry.sync.nacos.NacosSyncProperties.PREFIX;
 
 /**
@@ -38,12 +39,12 @@ public class NacosSyncProperties implements Serializable, InitializingBean {
 
   @NestedConfigurationProperty private Destination destination;
 
-  @Builder.Default
-  @NestedConfigurationProperty private SyncRule syncRule = new SyncRule();
+  @Builder.Default @NestedConfigurationProperty private SyncRule syncRule = new SyncRule();
 
   /**
    * is enabled deregister flag .
-   * <p>default: false</p>
+   *
+   * <p>default: false
    */
   @Builder.Default private boolean deregister = false;
 
@@ -55,7 +56,7 @@ public class NacosSyncProperties implements Serializable, InitializingBean {
 
   @Override
   public void afterPropertiesSet() {
-    if(syncRule != null) {
+    if (syncRule != null) {
       syncRule.afterPropertiesSet();
     }
   }
@@ -69,18 +70,41 @@ public class NacosSyncProperties implements Serializable, InitializingBean {
   @AllArgsConstructor
   public static class CoreConfig implements Serializable {
 
+    /**
+     * Syncer Server Dynamic Config Server Address
+     *
+     * <p>Nacos Server Address .
+     */
     private String configServerAddr;
 
+    /**
+     * Default Dynamic Config Namespace Id
+     *
+     * <p>default: ""
+     */
     @Builder.Default private String namespaceId = DEFAULT_CONFIG_NAMESPACE_ID;
 
+    /**
+     * Core Config DataId Supported .
+     *
+     * <p>default: <code>mixmicro-registry.properties</code>
+     */
     @Builder.Default private String dataId = "mixmicro-registry.properties";
 
+    /**
+     * Default Dynamic Config Group
+     *
+     * <p>default: <code>DEFAULT_GROUP</code>
+     */
     @Builder.Default private String group = DEFAULT_GROUP;
 
+    /**
+     * Dynamic Config Request Timeout
+     *
+     * <p>default: 5000 ms
+     */
     @Builder.Default private long timeout = 5000;
-
   }
-
 
   @Getter
   @Setter
@@ -89,12 +113,32 @@ public class NacosSyncProperties implements Serializable, InitializingBean {
   @AllArgsConstructor
   public static class Origin implements Serializable {
 
+    /**
+     * Nacos Origin Console Address .
+     *
+     * <p>
+     */
     private String consoleAddr;
 
+    /**
+     * Nacos Origin Server Address.
+     *
+     * <p>
+     */
     private String serverAddr;
 
+    /**
+     * Nacos Origin Console Auth Username
+     *
+     * <p>
+     */
     private String username;
 
+    /**
+     * Nacos Origin Console Auth Password
+     *
+     * <p>
+     */
     private String password;
   }
 
@@ -105,8 +149,18 @@ public class NacosSyncProperties implements Serializable, InitializingBean {
   @AllArgsConstructor
   public static class Destination implements Serializable {
 
+    /**
+     * Nacos Destination Server Address.
+     *
+     * <p>
+     */
     private String serverAddr;
 
+    /**
+     * Nacos Destination Server Console Address.
+     *
+     * <p>
+     */
     private String consoleAddr;
   }
 
@@ -117,10 +171,25 @@ public class NacosSyncProperties implements Serializable, InitializingBean {
   @AllArgsConstructor
   public static class Rebuild implements Serializable {
 
+    /**
+     * Is Rebuild Service Thread Enabled .
+     *
+     * <p>default: true
+     */
     @Builder.Default private boolean enabled = true;
 
+    /**
+     * Rebuild Service Thread Execute Interval
+     *
+     * <p>default: 5000 ms
+     */
     @Builder.Default private long checkInterval = 5000;
 
+    /**
+     * Timeunit .
+     *
+     * <p>default: ms - <code>TimeUnit.MILLISECONDS</code>
+     */
     @Builder.Default private TimeUnit timeUnit = TimeUnit.MILLISECONDS;
   }
 
@@ -131,17 +200,33 @@ public class NacosSyncProperties implements Serializable, InitializingBean {
   @AllArgsConstructor
   public static class Fix implements Serializable {
 
+    /**
+     * Is Fix Thread Service Enabled .
+     *
+     * <p>The role of repair threads is to compensate for monitoring namespaces, service nodes for
+     * changes after initialization.
+     */
     @Builder.Default private boolean enabled = false;
 
     /**
      * Startup Delay
      *
-     * <p>default: 20 s</p>
+     * <p>default: 20 s
      */
     @Builder.Default private long delay = 20 * 1000;
 
+    /**
+     * Fix Service Thread Execute Interval
+     *
+     * <p>default: 5000 ms
+     */
     @Builder.Default private long checkInterval = 5000;
 
+    /**
+     * Timeunit .
+     *
+     * <p>default: ms - <code>TimeUnit.MILLISECONDS</code>
+     */
     @Builder.Default private TimeUnit timeUnit = TimeUnit.MILLISECONDS;
   }
 
