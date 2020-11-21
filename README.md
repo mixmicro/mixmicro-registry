@@ -102,8 +102,9 @@ $ mvn docker:build
 *Second* : startup docker image
 
 ```bash
-docker run -p 2663:2663 \ 
-    --rm -e SERVER_ENV="docker" \ 
+$ docker run -p 2663:2663 \ 
+    --rm \ 
+    -e SERVER_ENV="docker" \ 
     -v /tmp/logs:/tmp/logs \
     -v /tmp/logs/mixmicro-registry-sync-server:/mixmicro-registry-sync-server/logs \ 
     --name mixmicro-registry-sync-server \
